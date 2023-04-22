@@ -1,8 +1,5 @@
 ﻿'''
 # Image to Painting Process
-
-# Create : 21.04.01
-# Update : 22.07.23
 # Author : Minku Koo
 '''
 
@@ -10,7 +7,6 @@ import cv2
 import os
 import numpy as np
 from libs.colorCode import HexColorCode
-import numba
 
 class Painting:
     def __init__(self, imagepath):
@@ -257,13 +253,6 @@ class Painting:
         
         return img
     
-    #https://stackoverflow.com/questions/8863810/python-find-similar-colors-best-way
-    def __colorDistance1(self, rgb1, rgb2):
-        '''d = {} distance between two colors(3)'''
-        rm = 0.5*(rgb1[2]+rgb2[2])
-        d = sum( ( 2 + rm, 4, 3 - rm ) * ( rgb1-rgb2 ) ** 2 ) ** 0.5
-        return d
-    
     def __colorDistance(self, fst, snd):
         '''
         # https://dev.to/tejeshreddy/color-difference-between-2-colours-using-python-182b
@@ -297,35 +286,6 @@ class Painting:
     # Hex Color String Code convert to BGR Color np.array
     def __hex2bgr(self, hex):
         return np.array( [int(hex[i:i+2], 16) for i in (4, 2, 0)] ) 
-    
-    # convert BGR to HSV
-    # https://www.w3resource.com/python-exercises/math/python-math-exercise-77.php
-    def __bgr_to_hsv(self, color):
-        b, g, r = tuple( color )
-        r, g, b = r/255.0, g/255.0, b/255.0
-        mx = max(r, g, b)
-        mn = min(r, g, b)
-        df = mx-mn
-        if mx == mn: h = 0
-        elif mx == r: h = (60 * ((g-b)/df) + 360) % 360
-        elif mx == g: h = (60 * ((b-r)/df) + 120) % 360
-        elif mx == b: h = (60 * ((r-g)/df) + 240) % 360
-        if mx == 0: s = 0
-        else: s = (df/mx)*100
-        
-        v = mx*100
-        return h, s, v
-    
-    # calc HSV Color Distatnce
-    # https://stackoverflow.com/questions/35113979/calculate-distance-between-colors-in-hsv-space
-    def __hsvDistance(self, h1, h2):
-        h0, s0, v0 = h1
-        h1, s1, v1 = h2
-        
-        dh = min(abs(h1-h0), 360-abs(h1-h0)) / 180.0
-        ds = abs(s1-s0)
-        dv = abs(v1-v0) / 255.0
-        return (dh*dh+ds*ds+dv*dv) ** 0.5
         
 def imageExpand(image, guessSize=False, size = 3):
     """

@@ -1,8 +1,5 @@
 ﻿'''
 # Draw Line on Image based on Color Boundaries
-
-# Start : 21.04.01
-# Update : 21.06.12
 # Author : Minku Koo
 '''
 
