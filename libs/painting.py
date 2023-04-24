@@ -1,31 +1,27 @@
-﻿'''
-# Image to Painting Process
-# Author : Minku Koo
-'''
-
-import cv2
+﻿import cv2
 import os
+
 import numpy as np
 from libs.colorCode import HexColorCode
 
 class Painting:
     def __init__(self, imagepath):
-        # K-Means 알고리즘 이용한 색상 군집화 이미지
-        self.colorClusteredMap = np.array([])
-        # 지정된 색상과 매칭한 이미지
-        self.paintingMap = np.array([])
+        # K-Means 알고리즘 이용한 색상 군집화된 이미지
+        self.np_color_clustered_img = np.array([])
+        # 지정된 색상과 매칭된 이미지
+        self.np_color_matched_img = np.array([])
         
-        self.image = cv2.imread(imagepath) # Original Image
-        self.fileBasename = os.path.basename(imagepath) # file base name
-        self.filename = self.fileBasename.split(".")[0] # file name
+        self.original_img = cv2.imread(imagepath) # Original Image
+        # self.file_base_name = os.path.basename(imagepath) # file base name
+        # self.filename = self.file_base_name.split(".")[0] # file name
         
         # 지정된 hex color 리스트
         self.hexColorCode =  HexColorCode().hexColorCodeList
         self.colorName = HexColorCode().colorNameList
         
         # clustered color list
-        self.clusteredColors = np.array([])
-        self.clusteredColorName = []
+        self.np_clustered_colors = np.array([])
+        self.list_clustered_color_names = []
     
     # image blurring
     def blurring(self, 
@@ -45,7 +41,7 @@ class Painting:
             blurring <np.ndarray> : blurred Image
         """
         
-        qimg = self.image.copy() # copy original image
+        qimg = self.original_img.copy() # copy original image
         
         step = min(max(0, step), 5) # 1<= step <= 5
         
@@ -65,30 +61,22 @@ class Painting:
    
     # color clustering
     def colorClustering(self, image, cluster = 16, round = 1): 
-        self.colorClusteredMap, sse = self.__kmeansColorCluster(image, 
-                                                                clusters = cluster, 
-                                                                rounds = round)
-        return self.colorClusteredMap
-   
-   # 클러스터 칼라 매칭 + 지정된 색상과 매칭 > 한번에 해결
-   # hexColorCode와 매칭하면 이상한 색상이 추출됨 -> 사용 보류
-    def allColorMatcing(self, image):
-        hexColors = np.array( [ self.__hex2bgr(hex) for hex in self.hexColorCode ] )
-        self.paintingMap = self.__matchColors(image, self.clusteredColors, hexColors)
-        #  파라미터 순서 꼭 지켜야함   !!!
-        return self.paintingMap
+        self.np_color_clustered_img, sse = self.__kmeansColorCluster(image, 
+                                                                    clusters = cluster, 
+                                                                    rounds = round)
+        return self.np_color_clustered_img
    
     # 여기에 확장한 이미지랑 클러스터 칼라 매칭 
-    def expandImageColorMatch(self, expandImage):
-        self.colorClusteredMap =  self.__matchColors(expandImage, self.clusteredColors)
-        return self.colorClusteredMap
+    def expandImageColorMatch(self, expand_image):
+        self.np_color_clustered_img =  self.__matchColors(expand_image, self.np_clustered_colors)
+        return self.np_color_clustered_img
     
     # color on image match with specified hex colors
    # hexColorCode와 매칭하면 이상한 색상이 추출됨 -> 사용 보류
-    def getPaintingColorMap(self, clusteredImage):
-        hexColors = np.array( [ self.__hex2bgr(hex) for hex in self.hexColorCode ] )
-        self.paintingMap = self.__matchColors(clusteredImage, hexColors)
-        return self.paintingMap
+    def getPaintingColorMap(self, clustered_image):
+        hexColors = np.array([ self.__hex2bgr(hex) for hex in self.hexColorCode ])
+        self.np_color_matched_img = self.__matchColors(clustered_image, hexColors)
+        return self.np_color_matched_img
     
     # counting numbers of color
     def getNumberOfColor(self, image):
@@ -169,7 +157,7 @@ class Painting:
                     flags = cv2.KMEANS_PP_CENTERS)
         
         centers = np.uint8(centers)
-        self.clusteredColors = centers
+        self.np_clustered_colors = centers
         res = centers[labels.flatten()]
         
         return res.reshape((image.shape)), round( compactness ** 0.5 // 10, 2 )
@@ -208,12 +196,7 @@ class Painting:
         
         img = colorImage.copy()
         
-        if len(matchColors)==1:
-            oneProcess = False
-            clusteredColor = matchColors[0]
-        else:
-            oneProcess = True
-            clusteredColor, paintingColor = matchColors
+        clusteredColor, paintingColor = matchColors
         
         colorDict = {}
         imageColors = []
@@ -228,10 +211,8 @@ class Painting:
                 
                 similarColor = getSimilarColor(color, clusteredColor)
                 
-                # painting까지 같이하는지
-                if oneProcess:
-                    # clustered color를 지정된 color와 매칭
-                    similarColor = getSimilarColor(similarColor, paintingColor)
+                # clustered color를 지정된 color와 매칭
+                similarColor = getSimilarColor(similarColor, paintingColor)
                 
                 
                 img[y][x] = similarColor
@@ -248,8 +229,7 @@ class Painting:
                 colorName.append( self.colorName[idx] )
             
             return colorName
-        if oneProcess:
-            self.clusteredColorName = setClusteredColorName(imageColors)
+        self.list_clustered_color_names = setClusteredColorName(imageColors)
         
         return img
     
@@ -263,16 +243,12 @@ class Painting:
 
         # Red Color
         color1_rgb = sRGBColor( fst[2], fst[1], fst[0] )
-
         # Blue Color
         color2_rgb = sRGBColor( snd[2], snd[1], snd[0] )
-
         # Convert from RGB to Lab Color Space
         color1_lab = convert_color(color1_rgb, LabColor)
-
         # Convert from RGB to Lab Color Space
         color2_lab = convert_color(color2_rgb, LabColor)
-
         # Find the color difference
         delta_e = delta_e_cie2000(color1_lab, color2_lab)
         # print("The difference between the 2 color = ", delta_e)
@@ -322,25 +298,14 @@ if __name__ == "__main__":
     clusteredImage = painting.colorClustering( blurImage, cluster = 16)
     
     # 이미지 확장, Way 1 or 2 < Select one
-    # ===== Way 1 ===== ) 
     expandedImage = imageExpand(clusteredImage, size = 4)
-    
     # 확장된 이미지에서 변형된 색상을 군집화된 색상과 매칭
     similarMap = painting.expandImageColorMatch(expandedImage)
     # 군집화된 색상을 지정된 색상과 가장 비슷한 색상으로 매칭
-    paintingMap = painting.getPaintingColorMap(similarMap)
-    # ==== Way 1 End ==== ) 
-    
-    
-    # ===== Way 2 ===== ) 
-    expandedImage = imageExpand(clusteredImage, guessSize = True)
-    
-    # Way 1의 과정을 하나로 합침
-    paintingMap = painting.allColorMatcing(expandedImage)
-    # ==== Way 2 End ==== ) 
+    np_color_matched_img = painting.getPaintingColorMap(similarMap)
     
     # 이미지 색상 개수 확인
-    number_of_color = painting.getNumberOfColor(paintingMap)
+    number_of_color = painting.getNumberOfColor(np_color_matched_img)
     print("Number of Color :", number_of_color)
     '''
     pass
