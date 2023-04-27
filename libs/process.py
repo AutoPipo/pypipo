@@ -6,8 +6,8 @@ class Painting:
     
     Parameters
     ----------
-    img_path : str (default: None)
-        File path of image
+    img : np.ndarray
+        Image that want to work
 
     Attributes
     ----------
@@ -19,8 +19,8 @@ class Painting:
         Clustered color data list
     """
 
-    def __init__(self, img_path):
-        self.original_img = cv2.imread(img_path) 
+    def __init__(self, img):
+        self.original_img = img
         self.painting = np.array([])
         self.colors = np.array([])
         return 
@@ -72,7 +72,7 @@ class Painting:
         """
 
         if blurring:
-            target_image = self.blurring(div = div,
+            target_image = self.__blurring(div = div,
                                          radius = radius,
                                          sigma_color = sigma_color,
                                          median_value = median_value,
@@ -88,7 +88,7 @@ class Painting:
                                                             attempts = attempts)
         return self.painting
     
-    def blurring(self, 
+    def __blurring(self, 
                 div,
                 radius, 
                 sigma_color,
@@ -208,82 +208,97 @@ class Painting:
         output = cv2.resize(image, None, fx = size, fy = size, interpolation = cv2.INTER_LINEAR)
         return output
     
+    
 
+class LineDrawing:
+    """Draw line on image with color boundary
+    
+    Parameters
+    ----------
+    img : np.ndarray
+        Input painting image
 
-class DrawLine:
-    def __init__(self, image):
-        '''
+    Attributes
+    ----------
+    web : np.array
+        Remain only lines from image color boundary, white background
+    """
+    def __init__(self, img):
+        self.IMAGE_MAX_BINARY = 255
+        self.painting = img
+        self.web = np.zeros(self.original_img.shape) + self.IMAGE_MAX_BINARY
+        return 
+    
+    def run(self, outline = True):
+        """Draw line on image
+
         Parameters
-            image <np.ndarray> : Image Object
-        '''
-        self.colorImage = image
-        self.lineMap = np.zeros(image.shape) + 255
+        ----------
+        outline : bool, optional (default: True)
+            Select that want to draw outline on web image
+
+        Returns
+        ----------
+        self.web : np.ndarray
+            Gray scale that line drawn on white background image
+        """
+        self.__draw_line(self.painting)
+        if outline:
+            self.__draw_outline()
+        return self.web
     
-    def getDrawLine(self):
-        '''
-        Line on White Image
-        '''
-        return self.__drawLine()
-    
-    def getLineOnImage(self):
-        '''
-        Line on Real Image
-        '''
-        return self.__lineOnImage()
-    
-    def __drawLine(self):
-        for y, orgRow in enumerate(self.colorImage[:-1]):
-            nextRow = self.colorImage[y+1]
+    def __draw_line(self, painting):
+        """Draw line with color boundary from painting image
+
+        Parameters
+        ----------
+        painting : np.ndarray
+            Input painting image
+
+        Returns
+        ----------
+        self.web : np.ndarray
+            Gray scale image that line drawn
+        """
+        for y, before_row in enumerate(painting[:-1]):
+            next_row = self.painting[y+1]
             # 다음 row와 비교했을 때, 색상이 다른 index 추출
-            compareRow = np.array( np.where((orgRow == nextRow) == False))
-            for x in np.unique(compareRow[0]):
+            compare_row = np.array( np.where((before_row == next_row) == False))
+            for x in np.unique(compare_row[0]):
                 # Convert to Black
-                self.lineMap[y][x] = np.array([0, 0, 0])
+                self.web[y][x] = np.array([0, 0, 0])
                             
-        width = self.lineMap.shape[1] # get Image Width
-        for x in range(width-1):
+        width = self.web.shape[1] # get Image Width
+        for _, x in enumerate(width - 1):
             # 다음 column과 비교했을 때, 색상이 다른 index 추출
-            compareCol = np.array( np.where((self.colorImage[:,x] == self.colorImage[:,x+1]) == False))
-            for y in np.unique(compareCol[0]):
+            compare_col = np.array( np.where((self.painting[:,x] == self.painting[:,x+1]) == False))
+            for y in np.unique(compare_col[0]):
                 # Convert to Black
-                self.lineMap[y][x] = np.array([0, 0, 0])
+                self.web[y][x] = np.array([0, 0, 0])
         
         # threshold를 이용하여, 2차원 Image로 변환
-        _, self.lineMap = cv2.threshold(self.lineMap, 199, 255, cv2.THRESH_BINARY)
+        _, self.web = cv2.threshold(self.web, 199, self.IMAGE_MAX_BINARY, cv2.THRESH_BINARY)
         
-        return self.lineMap
+        return self.web
     
-    
-    def __lineOnImage(self):
-        new_map = self.colorImage.copy()
-        lineMap = self.lineMap // 255
-        return np.multiply(new_map, lineMap) 
-    
-    def drawOutline(self, image):
-        # 이미지 가장자리에 임의의 선을 그어줌
-        # image[0], image[-1], image[:,0], image[:,-1] = 0, 0, 0, 0
-        image[0:2], image[-3:-1], image[:,0:2], image[:,-3:-1] = 0, 0, 0, 0
-        return image
-    
+    def __draw_outline(self):
+        """Draw outline on image
+        """
+        self.web[0:2], self.web[-3:-1], self.web[:,0:2], self.web[:,-3:-1] = 0, 0, 0, 0
+        return
 
-def leaveOnePixel(lineImage):
-    image = lineImage.copy()
     
-    _, image = cv2.threshold(image, 200, 1, cv2.THRESH_BINARY_INV)
-    skeleton = skeletonize(image)
-    skeleton = cv2.cvtColor(skeleton, cv2.COLOR_BGR2GRAY)
-    
-    canvas = np.zeros(skeleton.shape) + 1
-    
-    return 255 - np.multiply( canvas, skeleton )
 
 if __name__ == "__main__":
     # How to Use?
-    painting = Painting( "./imagePath/image.jpg")
-    result_image = painting.run(
+    img = cv2.imread("./imagePath/image.jpg")
+    painting = Painting(img)
+    painting_image = painting.run(
                                 k = 8,
                                 is_upscale = True,
                                 size = 2,
                                 blurring = True)
-    pass
+    
+    drawing = LineDrawing(painting_image)
+    line_drawn_image = drawing.run(outline = True)
     
