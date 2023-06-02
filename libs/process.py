@@ -151,8 +151,13 @@ class Painting:
             Sum of squared error
         """
         
+        # transform color data to use k-means algorithm
+        # need to trnasform into two-dimensional array
+        # [[B, G, R], [B, G, R] ... , [B, G, R]]
         height, width = image.shape[:2]
         training_data_samples = np.zeros([height * width, 3], dtype = np.float32)
+        training_data_samples = image.reshape(height * width, 3).astype(np.float32)
+        
         
         # sse : Sum of squared error
         # labels : Array about label, show like 0, 1
