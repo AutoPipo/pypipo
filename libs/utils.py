@@ -63,3 +63,35 @@ def get_number_of_image_color(image):
 
     number_of_colors = len(colorDict.keys())  
     return number_of_colors
+
+
+def division_blur(image, divisor):
+    ''' simplify image pixels with division
+    Parameters
+    ----------
+        image : np.ndarray
+            Input image
+        divisor : int (1 <= divisor <= 255)
+            A value for dividing color pixel values
+
+    Returns
+    ----------
+        image : np.ndarry
+            Blurred image
+    '''
+    divisor = get_value_in_range(divisor, 1, 255)
+    image -= (image // divisor)
+    image += (divisor // 2)
+
+    return image
+
+
+def get_value_in_range(value, min_value, max_value):
+    ''' check value with min, max
+    Parameters
+    ----------
+
+    Returns
+    ----------\
+    '''
+    return min(max(min_value, value), max_value)

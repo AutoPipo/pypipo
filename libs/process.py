@@ -1,5 +1,7 @@
 ﻿import cv2
 import numpy as np
+import math
+import utils
 
 class ImageColorSimplifier:
     """Change image to painting image.
@@ -33,10 +35,10 @@ class ImageColorSimplifier:
             is_upscale = False,
             size = 3,
             # blurring
-            blurring = False,
+            enables_blurring = False,
             div = 8, 
-            radius = 10, 
-            sigma_color = 20,
+            base_radius = 10, 
+            base_sigma_color = 20,
             median_value = 5,
             step = 0):
         """Cluster image color with k-means algorithm.
@@ -52,13 +54,13 @@ class ImageColorSimplifier:
         size : int, optional (default: 3)
             Size that want to expand image.
             If you want to guess the proper size, set size value under 1.
-        blurring : bool, optional (default: False)
+        enables_blurring : bool, optional (default: False)
             Blurring image
         div : int, optional (default: 8)
             Reducing numbers of color on image
-        radius : int, optional (default: 10)
+        base_radius : int, optional (default: 10)
             bilateralFilter Parameter
-        sigma_color : int, optional (default: 20)
+        base_sigma_color : int, optional (default: 20)
             bilateralFilter Parameter
         median_value : int, optional (default: 5)
             medianBlur Parameter
@@ -71,14 +73,15 @@ class ImageColorSimplifier:
             Color clustered image
         """
 
-        if blurring:
-            target_image = self.__blur_image(div = div,
-                                         radius = radius,
-                                         sigma_color = sigma_color,
-                                         median_value = median_value,
-                                         step = step)
-        else:
-            target_image = self.original_img.copy()
+        target_image = self.original_img.copy()
+        
+        if enables_blurring:
+            target_image = self.__blur_image(target_image,
+                                        div = div,
+                                        base_radius = base_radius,
+                                        base_sigma_color = base_sigma_color,
+                                        median_value = median_value,
+                                        step = step)
 
         if is_upscale:
             target_image = self.__expand_image(target_image, size = size)
@@ -89,20 +92,23 @@ class ImageColorSimplifier:
         return self.painting
     
     def __blur_image(self, 
+                image,
                 div,
-                radius, 
-                sigma_color,
+                base_radius, 
+                base_sigma_color,
                 median_value,
                 step):
         """Image blurring
 
         Parameters
         ----------
+        image : np.ndarray
+            Input image
         div : int
             Reducing numbers of color on image
-        radius : int
+        base_radius : int
             bilateralFilter Parameter
-        sigma_color : int
+        base_sigma_color : int
             bilateralFilter Parameter
         median_value : int
             medianBlur Parameter
@@ -111,25 +117,27 @@ class ImageColorSimplifier:
 
         Returns
         -------
-        blurring : np.ndarray
+        blurred_image : np.ndarray
             blurred Image
         """
+
+        height, width = image.shape[:2]
+        step = utils.get_value_in_range(step, 0, 5)
         
-        qimg = self.original_img.copy() # copy original image
+        # calcuate weights for blurring
+        img_size_weight = int(math.sqrt(width * height)) // 100
+        radius_weight = min(int(img_size_weight * 1.5), 40) + step * 2
+        sigma_color_weight = min(int(img_size_weight * 2.5), 90) + step * 4
+
+        radius = base_radius + radius_weight
+        sigma_color = base_sigma_color + sigma_color_weight
         
-        step = min(max(0, step), 5) # 1 <= step <= 5
-        
-        size_of_image = int( (qimg.shape[1] * qimg.shape[0]) ** 0.5 ) // 100
-        sigma_color += min( int(size_of_image * 2.5), 90) + step * 4
-        radius += min( int(size_of_image * 1.5), 40) + step * 2
-        
-        # blurring
-        blurring = cv2.bilateralFilter(qimg, radius, sigma_color, 60)
-        blurring = cv2.medianBlur(blurring, median_value)
-        
-        # reduce numbers of color
-        blurring = blurring // div * div + div // 2
-        return blurring
+        # blur image
+        blured_image = cv2.bilateralFilter(image, radius, sigma_color, 60)
+        blured_image = cv2.medianBlur(blured_image, median_value)
+        blured_image = utils.division_blur(blured_image, div)
+
+        return blured_image
     
     def __cluster_color(self, image, number_of_color, attempts):
         """Cluster image color with k-means algorithm.
@@ -155,7 +163,6 @@ class ImageColorSimplifier:
         # need to trnasform into two-dimensional array
         # [[B, G, R], [B, G, R] ... , [B, G, R]]
         height, width = image.shape[:2]
-        training_data_samples = np.zeros([height * width, 3], dtype = np.float32)
         training_data_samples = image.reshape(height * width, 3).astype(np.float32)
         
         
@@ -183,7 +190,6 @@ class ImageColorSimplifier:
         centers = np.uint8(centers)
         res = centers[labels.flatten()]
         self.colors = centers
-
         # for returns
         sse = round(sse ** 0.5 // 10, 2)
         color_clustered_image = res.reshape((image.shape))
@@ -297,14 +303,20 @@ class ColorSectorLineDrawer:
 
 if __name__ == "__main__":
     # How to Use?
-    img = cv2.imread("./imagePath/image.jpg")
+    img = cv2.imread("lala.jpg")
     painting = ImageColorSimplifier(img)
     painting_image = painting.run(
                                 k = 8,
-                                is_upscale = True,
+                                is_upscale = False,
                                 size = 2,
-                                blurring = True)
+                                enables_blurring = True,)
     
-    drawing = ColorSectorLineDrawer(painting_image)
-    line_drawn_image = drawing.run(outline = True)
+
+
+    # drawing = ColorSectorLineDrawer(painting_image)
+    # line_drawn_image = drawing.run(outline = True)
     
+    
+
+    cv2.imwrite('lala_after.jpg', painting_image)
+    cv2.waitKey(0)
