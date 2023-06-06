@@ -1,7 +1,7 @@
 ﻿import cv2
 import numpy as np
 
-class Painting:
+class ImageColorSimplifier:
     """Change image to painting image.
     
     Parameters
@@ -72,7 +72,7 @@ class Painting:
         """
 
         if blurring:
-            target_image = self.__blurring(div = div,
+            target_image = self.__blur_image(div = div,
                                          radius = radius,
                                          sigma_color = sigma_color,
                                          median_value = median_value,
@@ -83,12 +83,12 @@ class Painting:
         if is_upscale:
             target_image = self.__expand_image(target_image, size = size)
 
-        self.painting, sse = self.__cluster_color_with_kmeans(target_image, 
+        self.painting, sse = self.__cluster_color(target_image, 
                                                             number_of_color = k, 
                                                             attempts = attempts)
         return self.painting
     
-    def __blurring(self, 
+    def __blur_image(self, 
                 div,
                 radius, 
                 sigma_color,
@@ -131,7 +131,7 @@ class Painting:
         blurring = blurring // div * div + div // 2
         return blurring
     
-    def __cluster_color_with_kmeans(self, image, number_of_color, attempts):
+    def __cluster_color(self, image, number_of_color, attempts):
         """Cluster image color with k-means algorithm.
 
         Parameters
@@ -215,7 +215,7 @@ class Painting:
     
     
 
-class LineDrawing:
+class ColorSectorLineDrawer:
     """Draw line on image with color boundary
     
     Parameters
@@ -298,13 +298,13 @@ class LineDrawing:
 if __name__ == "__main__":
     # How to Use?
     img = cv2.imread("./imagePath/image.jpg")
-    painting = Painting(img)
+    painting = ImageColorSimplifier(img)
     painting_image = painting.run(
                                 k = 8,
                                 is_upscale = True,
                                 size = 2,
                                 blurring = True)
     
-    drawing = LineDrawing(painting_image)
+    drawing = ColorSectorLineDrawer(painting_image)
     line_drawn_image = drawing.run(outline = True)
     
