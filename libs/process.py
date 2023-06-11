@@ -31,9 +31,9 @@ class ImageColorSimplifier:
             # kmeans clustering
             k = 16, 
             attempts = 1,
-            # expand size
-            is_upscale = False,
-            size = 3,
+            # upscaling
+            enables_upscaling = False,
+            upscaling_ratio = 3.0,
             # blurring
             enables_blurring = False,
             div = 8, 
@@ -49,9 +49,9 @@ class ImageColorSimplifier:
             Number of color clustered
         attempts : int, optional (default: 1)
             How many iterate try to k-means clustering
-        is_upscale : bool, optional (default: False)
+        enables_upscaling : bool, optional (default: False)
             Expand size of image
-        size : int, optional (default: 3)
+        upscaling_ratio : int, optional (default: 3.0)
             Size that want to expand image.
             If you want to guess the proper size, set size value under 1.
         enables_blurring : bool, optional (default: False)
@@ -83,8 +83,8 @@ class ImageColorSimplifier:
                                         median_value = median_value,
                                         step = step)
 
-        if is_upscale:
-            target_image = self.__expand_image(target_image, size = size)
+        if enables_upscaling:
+            target_image = self.__upscale_image(target_image, upscaling_ratio)
 
         self.painting, sse = self.__cluster_color(target_image, 
                                                             number_of_color = k, 
@@ -195,14 +195,14 @@ class ImageColorSimplifier:
         color_clustered_image = res.reshape((image.shape))
         return color_clustered_image, sse
    
-    def __expand_image(self, image, size):
+    def __upscale_image(self, image, upscaling_ratio):
         """Expand image size
 
         Parameters
         ----------
         image : np.ndarray
             Input image
-        size : int
+        upscaling_ratio : float
             Size that want to expand image.
             If you want to guess the proper size, set size value under 1.
 
@@ -211,13 +211,20 @@ class ImageColorSimplifier:
         output : np.ndarray
             Expanded image
         """
-        STANDARD_SIZE_OF_IMAGE = 5000
-        if size < 1:
-            max_image_length = max(image.shape[1], image.shape[0])
-            size = (STANDARD_SIZE_OF_IMAGE // max_image_length) + 1
 
-        output = cv2.resize(image, None, fx = size, fy = size, interpolation = cv2.INTER_LINEAR)
-        return output
+        STANDARD_SIZE_OF_IMAGE = 5000
+
+        # get proper ratio
+        if upscaling_ratio < 1:
+            height, width = image.shape[:2]
+            bigger_size = max(height, width)
+            upscaling_ratio = STANDARD_SIZE_OF_IMAGE / bigger_size
+
+        upscaled_image = cv2.resize(image, None, 
+                            fx = upscaling_ratio, fy = upscaling_ratio,
+                            interpolation = cv2.INTER_LINEAR)
+        
+        return upscaled_image
     
     
 
@@ -305,10 +312,9 @@ if __name__ == "__main__":
     # How to Use?
     img = cv2.imread("lala.jpg")
     painting = ImageColorSimplifier(img)
-    painting_image = painting.run(
-                                k = 8,
-                                is_upscale = False,
-                                size = 2,
+    painting_image = painting.run(k = 8,
+                                enables_upscaling = True,
+                                upscaling_ratio = 2.0,
                                 enables_blurring = True,)
     
 
