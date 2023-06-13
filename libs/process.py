@@ -15,22 +15,16 @@ class ImageColorSimplifier:
     ----------
     original_img : np.array
         Input original image
-    painting : np.array
-        Color clustered image (Applied K-Means Algorithm)
-    colors : np.array
-        Clustered color data list
     """
 
     def __init__(self, img):
         self.original_img = img
-        self.painting = np.array([])
-        self.colors = np.array([])
         return 
     
     def run(self, 
             # kmeans clustering
-            k = 16, 
-            attempts = 1,
+            target_num_of_color = 16, 
+            clustring_iters = 1,
             # upscaling
             enables_upscaling = False,
             upscaling_ratio = 3.0,
@@ -69,8 +63,9 @@ class ImageColorSimplifier:
 
         Returns
         ----------
-        self.painting : np.ndarray
+        target_image : np.ndarray
             Color clustered image
+        
         """
 
         target_image = self.original_img.copy()
@@ -86,10 +81,11 @@ class ImageColorSimplifier:
         if enables_upscaling:
             target_image = self.__upscale_image(target_image, upscaling_ratio)
 
-        self.painting, sse = self.__cluster_color(target_image, 
-                                                            number_of_color = k, 
-                                                            attempts = attempts)
-        return self.painting
+        target_image, clustered_colors, sse = self.__cluster_color(target_image, 
+                                            target_num_of_color = target_num_of_color, 
+                                            iterations = clustring_iters)
+
+        return target_image, clustered_colors, sse
     
     def __blur_image(self, 
                 image,
@@ -139,61 +135,80 @@ class ImageColorSimplifier:
 
         return blured_image
     
-    def __cluster_color(self, image, number_of_color, attempts):
+    def __cluster_color(self, image, target_num_of_color, iterations):
         """Cluster image color with k-means algorithm.
 
         Parameters
         ----------
         image : np.ndarray
             Input image
-        number_of_color : int
+        target_num_of_color : int
             Number of color clustered
-        attempts : int
+        iterations : int
             How many iterate try to k-means clustering
 
         Returns
         ----------
         color_clustered_image : np.ndarray
             Color clustered image
+        clustered_colors : np.ndarray
+            Clustered color data list
         sse : float
             Sum of squared error
         """
         
+        height, width = image.shape[:2]
+
         # transform color data to use k-means algorithm
         # need to trnasform into two-dimensional array
         # [[B, G, R], [B, G, R] ... , [B, G, R]]
-        height, width = image.shape[:2]
-        training_data_samples = image.reshape(height * width, 3).astype(np.float32)
+        training_data = image.reshape(height * width, 3).astype(np.float32)
+
+        # termination criteria for k-means runs
+        CRITERIA = (
+            # end clustring when max_iter or epsilon is reached. 
+            cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,
+            100000, # max_iter: Max number of iterations
+            0.0001, # epsilon: Specific Accuracy Required
+        ) 
+
+        # sse: Sum of squared error
+        # pixel_color_indexs : np.ndarray 
+        #   - each element means what clusted color index the pixel has
+        #   - [[0], [3], [2], ... [0], [4]]
+        # clustered_colors : np.ndarray
+        #   - each element means clusted color values [B, G, R]
+        sse, pixel_color_indexs, clustered_colors = cv2.kmeans(
+                                # Align training data, data type = np.float32
+                                training_data,
+                                # number of cluster
+                                target_num_of_color,
+                                # Sort the cluster numbers for each sample
+                                None,
+                                criteria = CRITERIA,
+                                # Number of iterations to run using different initial centroids
+                                attempts = iterations,
+                                # flags : To set the Initial Centroids
+                                # cv2.KMEANS_RANDOM_CENTERS : Random
+                                # cv2.KMEANS_PP_CENTERS : K-Means++ Algorithm
+                                # cv2.KMEANS_USE_INITIAL_LABELS : User selection
+                                flags = cv2.KMEANS_PP_CENTERS)
         
-        
-        # sse : Sum of squared error
-        # labels : Array about label, show like 0, 1
-        # centers : Cluster centroid array
-        sse, labels, centers = cv2.kmeans(
-                                        training_data_samples,  # Align training data, data type = np.float32
-                                        number_of_color,        # number of cluster
-                                        None,                   # Sort the cluster numbers for each sample
-                                        
-                                        # TERM_CRITERIA_EPS : End iteration when a certain accuracy is reached
-                                        # TERM_CRITERIA_MAX_ITER : End iteration after a certain number of iterations
-                                        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 
-                                                    100000, # max_iter : Max number of iterations
-                                                    0.0001), # epsilon : Specific Accuracy Required
-                                        attempts = attempts,  # Number of iterations to run using different initial centroids
-                                        
-                                        # flags : To set the Initial Centroids
-                                        # cv2.KMEANS_RANDOM_CENTERS : Random
-                                        # cv2.KMEANS_PP_CENTERS : K-Means++ Algorithm
-                                        # cv2.KMEANS_USE_INITIAL_LABELS : User selection
-                                        flags = cv2.KMEANS_PP_CENTERS)
-        
-        centers = np.uint8(centers)
-        res = centers[labels.flatten()]
-        self.colors = centers
-        # for returns
-        sse = round(sse ** 0.5 // 10, 2)
-        color_clustered_image = res.reshape((image.shape))
-        return color_clustered_image, sse
+        # cast to integer because data type is float.
+        clustered_colors = np.uint8(clustered_colors)
+
+        sse = round(math.sqrt(sse) // 10, 2)
+
+        # reshape pixel color indexs for boardcasting.
+        # before: [[0], [2], [3], ... [4], [7], [0]]
+        # after : [0, 2, 3, ... 4, 7, 0]
+        pixel_color_indexs = pixel_color_indexs.flatten()
+        # match clusted colors with color index using boardcasting
+        color_clustered_image = clustered_colors[pixel_color_indexs]
+        # revert to original image shape (height x width)
+        color_clustered_image = color_clustered_image.reshape((height, width, 3))
+
+        return color_clustered_image, clustered_colors, sse
    
     def __upscale_image(self, image, upscaling_ratio):
         """Expand image size
@@ -208,7 +223,7 @@ class ImageColorSimplifier:
 
         Returns
         ----------
-        output : np.ndarray
+        upscaled_image : np.ndarray
             Expanded image
         """
 
@@ -311,18 +326,13 @@ class ColorSectorLineDrawer:
 if __name__ == "__main__":
     # How to Use?
     img = cv2.imread("lala.jpg")
-    painting = ImageColorSimplifier(img)
-    painting_image = painting.run(k = 8,
-                                enables_upscaling = True,
-                                upscaling_ratio = 2.0,
-                                enables_blurring = True,)
-    
-
+    imageColorSimplifier = ImageColorSimplifier(img)
+    painting_image, _, _ = imageColorSimplifier.run(8,
+                        enables_upscaling = True,
+                        upscaling_ratio = 2.0,
+                        enables_blurring = True,)
 
     # drawing = ColorSectorLineDrawer(painting_image)
     # line_drawn_image = drawing.run(outline = True)
     
-    
-
     cv2.imwrite('lala_after.jpg', painting_image)
-    cv2.waitKey(0)
