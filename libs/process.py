@@ -81,11 +81,11 @@ class ImageColorSimplifier:
         if enables_upscaling:
             target_image = self.__upscale_image(target_image, upscaling_ratio)
 
-        target_image, clustered_colors, sse = self.__cluster_color(target_image, 
+        target_image, clustered_colors, sse, index_map = self.__cluster_color(target_image, 
                                             target_num_of_color = target_num_of_color, 
                                             iterations = clustring_iters)
 
-        return target_image, clustered_colors, sse
+        return target_image, clustered_colors, sse, index_map
     
     def __blur_image(self, 
                 image,
@@ -202,13 +202,14 @@ class ImageColorSimplifier:
         # reshape pixel color indexs for boardcasting.
         # before: [[0], [2], [3], ... [4], [7], [0]]
         # after : [0, 2, 3, ... 4, 7, 0]
+        index_map = pixel_color_indexs.reshape((height, width))
         pixel_color_indexs = pixel_color_indexs.flatten()
         # match clusted colors with color index using boardcasting
         color_clustered_image = clustered_colors[pixel_color_indexs]
         # revert to original image shape (height x width)
         color_clustered_image = color_clustered_image.reshape((height, width, 3))
 
-        return color_clustered_image, clustered_colors, sse
+        return color_clustered_image, clustered_colors, sse, index_map
    
     def __upscale_image(self, image, upscaling_ratio):
         """Expand image size
@@ -240,99 +241,144 @@ class ImageColorSimplifier:
                             interpolation = cv2.INTER_LINEAR)
         
         return upscaled_image
-    
-    
+
 
 class ColorSectorLineDrawer:
     """Draw line on image with color boundary
     
     Parameters
     ----------
-    img : np.ndarray
-        Input painting image
+    map : np.ndarray
+        a array that contains simplified color index
 
     Attributes
     ----------
     web : np.array
         Remain only lines from image color boundary, white background
     """
-    def __init__(self, img):
-        self.IMAGE_MAX_BINARY = 255
-        self.painting = img
-        self.web = np.zeros(self.painting.shape) + self.IMAGE_MAX_BINARY
-        return 
+
+    def __init__(self, map):
+        self.map = map
+        self.WHITE = 255
+        self.BLACK = 0
     
-    def run(self, outline = True):
+    def run(self, outline_thickness = 3):
         """Draw line on image
 
         Parameters
         ----------
-        outline : bool, optional (default: True)
-            Select that want to draw outline on web image
+        outline_thickness : int, optional (default: 3)
+            image outline thinckness
 
         Returns
         ----------
         self.web : np.ndarray
-            Gray scale that line drawn on white background image
+            a black and white image that line drawn
         """
-        self.__draw_line(self.painting)
-        if outline:
-            self.__draw_outline()
-        return self.web
-    
-    def __draw_line(self, painting):
-        """Draw line with color boundary from painting image
+        web = self.__draw_line()
+
+        if outline_thickness > 0:
+            web = self.__draw_outline(web, outline_thickness)
+        
+        return web
+
+
+    def __draw_line(self):
+        """Draw line on color boundary from color index array
 
         Parameters
         ----------
-        painting : np.ndarray
-            Input painting image
 
         Returns
         ----------
-        self.web : np.ndarray
-            Gray scale image that line drawn
+        web : np.ndarray
+            a black and white image that line drawn
         """
-        for y, before_row in enumerate(painting[:-1]):
-            next_row = self.painting[y+1]
-            # 다음 row와 비교했을 때, 색상이 다른 index 추출
-            compare_row = np.array( np.where((before_row == next_row) == False))
-            for x in np.unique(compare_row[0]):
-                # Convert to Black
-                self.web[y][x] = np.array([0, 0, 0])
-                            
-        width = self.web.shape[1] # get Image Width
 
-        for _, x in enumerate(range(width - 1)):
-            # 다음 column과 비교했을 때, 색상이 다른 index 추출
-            compare_col = np.array( np.where((self.painting[:,x] == self.painting[:,x+1]) == False))
-            for y in np.unique(compare_col[0]):
-                # Convert to Black
-                self.web[y][x] = np.array([0, 0, 0])
+        # Find color index difference by comparing row and columns.
+        hor_diff = self.__get_diff(self.map)
+        ver_diff = self.__get_diff(self.map.T)
+
+        # rotate 90 degree to fit hor_diff
+        ver_diff = ver_diff.T
+
+        # merge horizontal and vertical difference by element-wise operation
+        diff = ver_diff + hor_diff
+
+        # set pixel color to black if there is a difference
+        web = np.where(diff != 0, self.BLACK, self.WHITE)
         
-        # threshold를 이용하여, 2차원 Image로 변환
-        _, self.web = cv2.threshold(self.web, 199, self.IMAGE_MAX_BINARY, cv2.THRESH_BINARY)
-        
-        return self.web
+        return web
     
-    def __draw_outline(self):
+    
+    def __draw_outline(self, web, thickness):
         """Draw outline on image
-        """
-        self.web[0:2], self.web[-3:-1], self.web[:,0:2], self.web[:,-3:-1] = 0, 0, 0, 0
-        return
 
-    
+        Parameters
+        ----------
+        web : np.ndarray
+            a black and white image that line drawn
+        thickness : int
+            outline thickness
+        
+        Returns
+        ---------
+        web : np.ndarray
+            a black and white image that outline drawn
+        """
+
+        # validate thickness to prevent INDEX OUT OF RANGE Exception
+        min_size = min(web.shape)
+        thickness = utils.get_value_in_range(thickness, 1, min_size)
+
+        # draw outline at top
+        web[0 : (thickness - 1)] = 0
+        # draw outline at bottom
+        web[-thickness : -1] = 0
+        # draw outline at left
+        web[:, 0 : (thickness - 1)] = 0
+        # draw outline at right
+        web[:, -thickness : -1] = 0
+
+        return web
+
+
+    def __get_diff(self, map):
+        """Draw outline on image
+
+        Parameters
+        ----------
+        map : np.ndarray
+            a array that contains simplified color index
+        
+        Returns
+        ---------
+        diff : np.ndarray
+            a array that contains each row value diffences.
+        """
+
+        diff = np.zeros(map.shape) + self.WHITE
+
+        # subtracts current row and next row
+        for y, row in enumerate(map[:-1]):
+            next_row = map[y + 1]
+            diff[y] = row - next_row
+
+        return diff
+        
+
 
 if __name__ == "__main__":
     # How to Use?
     img = cv2.imread("lala.jpg")
     imageColorSimplifier = ImageColorSimplifier(img)
-    painting_image, _, _ = imageColorSimplifier.run(8,
+    simplified_image, _, _, index_map = imageColorSimplifier.run(8,
                         enables_upscaling = True,
                         upscaling_ratio = 2.0,
                         enables_blurring = True,)
-
-    # drawing = ColorSectorLineDrawer(painting_image)
-    # line_drawn_image = drawing.run(outline = True)
+    cv2.imwrite("lala_color_simplified.jpg", simplified_image)
     
-    cv2.imwrite('lala_after.jpg', painting_image)
+    colorSectorLineDrawer = ColorSectorLineDrawer(index_map)
+    line_drawed_image = colorSectorLineDrawer.run()
+
+    cv2.imwrite("lala_line_drawed.jpg", line_drawed_image)
