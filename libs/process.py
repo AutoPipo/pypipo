@@ -226,7 +226,7 @@ class LineDrawing:
     def __init__(self, img):
         self.IMAGE_MAX_BINARY = 255
         self.painting = img
-        self.web = np.zeros(self.original_img.shape) + self.IMAGE_MAX_BINARY
+        self.web = np.zeros(self.painting.shape) + self.IMAGE_MAX_BINARY
         return 
     
     def run(self, outline = True):
@@ -269,7 +269,7 @@ class LineDrawing:
                 self.web[y][x] = np.array([0, 0, 0])
                             
         width = self.web.shape[1] # get Image Width
-        for _, x in enumerate(width - 1):
+        for _, x in enumerate(range(width - 1)):
             # 다음 column과 비교했을 때, 색상이 다른 index 추출
             compare_col = np.array( np.where((self.painting[:,x] == self.painting[:,x+1]) == False))
             for y in np.unique(compare_col[0]):
@@ -291,7 +291,7 @@ class LineDrawing:
 
 if __name__ == "__main__":
     # How to Use?
-    img = cv2.imread("./imagePath/image.jpg")
+    img = cv2.imread("./libs/lala.jpg")
     painting = Painting(img)
     painting_image = painting.run(
                                 k = 8,
