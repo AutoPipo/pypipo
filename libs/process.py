@@ -1,4 +1,6 @@
-﻿import cv2
+﻿# -*- coding: utf-8 -*-
+
+import cv2
 import numpy as np
 
 class Painting:
@@ -89,47 +91,38 @@ class Painting:
         return self.painting
     
     def __blurring(self, 
-                div,
-                radius, 
-                sigma_color,
-                median_value,
-                step):
+                    div,
+                    sigma):
         """Image blurring
 
         Parameters
         ----------
         div : int
             Reducing numbers of color on image
-        radius : int
-            bilateralFilter Parameter
         sigma_color : int
             bilateralFilter Parameter
-        median_value : int
-            medianBlur Parameter
-        step : int
-            Blurring intensity by step size
 
         Returns
         -------
-        blurring : np.ndarray
+        blurred_image : np.ndarray
             blurred Image
         """
+
+        BILATERAL_FILTER_RADIUS = -1  # Auto decision by sigmaSpace
+        BILATERAL_FILTER_SIGMACOLOR_MIN = 10
+        BILATERAL_FILTER_SIGMACOLOR_MAX = 120
         
         qimg = self.original_img.copy() # copy original image
         
-        step = min(max(0, step), 5) # 1 <= step <= 5
+        sigma = max(sigma, BILATERAL_FILTER_SIGMACOLOR_MIN)
+        sigma = min(sigma, BILATERAL_FILTER_SIGMACOLOR_MAX)
         
-        size_of_image = int( (qimg.shape[1] * qimg.shape[0]) ** 0.5 ) // 100
-        sigma_color += min( int(size_of_image * 2.5), 90) + step * 4
-        radius += min( int(size_of_image * 1.5), 40) + step * 2
-        
-        # blurring
-        blurring = cv2.bilateralFilter(qimg, radius, sigma_color, 60)
-        blurring = cv2.medianBlur(blurring, median_value)
+        # bilateral blurring
+        blurred_image = cv2.bilateralFilter(qimg, BILATERAL_FILTER_RADIUS, sigma, sigma)
         
         # reduce numbers of color
-        blurring = blurring // div * div + div // 2
-        return blurring
+        blurred_image = blurred_image // div * div + div // 2
+        return blurred_image
     
     def __cluster_color_with_kmeans(self, image, number_of_color, attempts):
         """Cluster image color with k-means algorithm.
