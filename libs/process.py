@@ -84,7 +84,7 @@ class Painting:
 
         if is_upscale:
             target_image = self.__expand_image(target_image, size = size)
-
+        
         self.painting, sse = self.__cluster_color_with_kmeans(target_image, 
                                                             number_of_color = k, 
                                                             attempts = attempts)
@@ -146,7 +146,13 @@ class Painting:
         
         height, width = image.shape[:2]
         training_data_samples = np.zeros([height * width, 3], dtype = np.float32)
-        
+
+        count = 0
+        for x in range(height):
+            for y in range(width):
+                training_data_samples[count] = image[x][y]
+                count += 1
+
         # sse : Sum of squared error
         # labels : Array about label, show like 0, 1
         # centers : Cluster centroid array
@@ -291,7 +297,7 @@ if __name__ == "__main__":
                                 is_upscale = True,
                                 size = 2,
                                 blurring = True)
-    
+    cv2.imwrite("./libs/lala-after.jpg", painting_image)
     drawing = LineDrawing(painting_image)
     line_drawn_image = drawing.run(outline = True)
     
