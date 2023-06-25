@@ -1,8 +1,4 @@
-﻿# image processing
-# Author : Ji-yong
-# Project Start:: 2021.04.01
-# Last Modified from Ji-yong 2021.10.29
-
+﻿# -*- coding: utf-8 -*-
 
 import cv2
 import numpy as np
@@ -14,7 +10,6 @@ import sys
 
 
 # 색 리스트 반환 함수 (Minku koo)
-@numba.jit(forceobj = True)
 def createColorDict(image):
     colorDict = {}
     for y, row in enumerate(image):
@@ -49,7 +44,6 @@ def setLabel(image, num, pt, radius):
 
 
 # 컨투어 내부의 색을 평균내서 어느 색인지 체크
-@numba.jit(forceobj = True)
 def label(image, contour, lab, colorNames):
     mask = np.zeros(image.shape[:2], dtype="uint8")
 
@@ -75,7 +69,6 @@ def getImageFromPath(path):
 
 
 # 해당 이미지에서 색 추출
-@numba.jit(forceobj = True)
 def getColorFromImage(img):
     # 인식할 색 입력
     temp = [ (idx, color) for (idx, color) in enumerate(   list( createColorDict(img).keys() ),  1   ) ]
@@ -84,7 +77,6 @@ def getColorFromImage(img):
 
 
 # 해당 이미지에서 contours, hierarchy, image_bin 반환
-@numba.jit(forceobj = True)
 def getContoursFromImage(img):
     # 이진화
     # cv2.COLOR_BGR2HSV
@@ -98,12 +90,10 @@ def getContoursFromImage(img):
     return contours, hierarchy, image_bin
 
 
-@numba.jit(forceobj = True)
 def makeWhiteFromImage(img):
     return np.zeros(img.copy().shape) + 255
 
 
-@numba.jit(forceobj = True)
 def getImgLabelFromImage(colors, img):
     lab = np.zeros((len(colors), 1, 3), dtype="uint8")
     for i in range(len(colors)):
@@ -117,7 +107,6 @@ def getImgLabelFromImage(colors, img):
     return img_lab, lab
 
 
-# @numba.jit(forceobj = True)
 def getRadiusCenterCircle(raw_dist):
     dist_transform, label = cv2.distanceTransformWithLabels(raw_dist, cv2.DIST_L2, maskSize=5)
 
@@ -157,7 +146,6 @@ def getRadiusCenterCircle(raw_dist):
 
 
 
-# @numba.jit(forceobj = True)
 def setColorNumberFromContours(img, thresh, contours, hierarchy, img_lab, lab, colorNames, gif_mode):
 
     cnt = 9
@@ -202,8 +190,7 @@ def setColorNumberFromContours(img, thresh, contours, hierarchy, img_lab, lab, c
 
     return img
 
-    
-@numba.jit(forceobj = True)
+
 def setColorLabel(img, colorNames, colors):
     fontface = cv2.FONT_HERSHEY_SIMPLEX
     scale = 1 # 0.6

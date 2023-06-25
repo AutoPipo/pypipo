@@ -1,4 +1,6 @@
-﻿import cv2
+﻿# -*- coding: utf-8 -*-
+
+import cv2
 import numpy as np
 
 class Painting:
@@ -82,54 +84,45 @@ class Painting:
 
         if is_upscale:
             target_image = self.__expand_image(target_image, size = size)
-
+        
         self.painting, sse = self.__cluster_color_with_kmeans(target_image, 
                                                             number_of_color = k, 
                                                             attempts = attempts)
         return self.painting
     
     def __blurring(self, 
-                div,
-                radius, 
-                sigma_color,
-                median_value,
-                step):
+                    div,
+                    sigma):
         """Image blurring
 
         Parameters
         ----------
         div : int
             Reducing numbers of color on image
-        radius : int
-            bilateralFilter Parameter
         sigma_color : int
             bilateralFilter Parameter
-        median_value : int
-            medianBlur Parameter
-        step : int
-            Blurring intensity by step size
 
         Returns
         -------
-        blurring : np.ndarray
+        blurred_image : np.ndarray
             blurred Image
         """
+
+        BILATERAL_FILTER_RADIUS = -1  # Auto decision by sigmaSpace
+        BILATERAL_FILTER_SIGMACOLOR_MIN = 10
+        BILATERAL_FILTER_SIGMACOLOR_MAX = 120
         
         qimg = self.original_img.copy() # copy original image
         
-        step = min(max(0, step), 5) # 1 <= step <= 5
+        sigma = max(sigma, BILATERAL_FILTER_SIGMACOLOR_MIN)
+        sigma = min(sigma, BILATERAL_FILTER_SIGMACOLOR_MAX)
         
-        size_of_image = int( (qimg.shape[1] * qimg.shape[0]) ** 0.5 ) // 100
-        sigma_color += min( int(size_of_image * 2.5), 90) + step * 4
-        radius += min( int(size_of_image * 1.5), 40) + step * 2
-        
-        # blurring
-        blurring = cv2.bilateralFilter(qimg, radius, sigma_color, 60)
-        blurring = cv2.medianBlur(blurring, median_value)
+        # bilateral blurring
+        blurred_image = cv2.bilateralFilter(qimg, BILATERAL_FILTER_RADIUS, sigma, sigma)
         
         # reduce numbers of color
-        blurring = blurring // div * div + div // 2
-        return blurring
+        blurred_image = blurred_image // div * div + div // 2
+        return blurred_image
     
     def __cluster_color_with_kmeans(self, image, number_of_color, attempts):
         """Cluster image color with k-means algorithm.
@@ -153,7 +146,13 @@ class Painting:
         
         height, width = image.shape[:2]
         training_data_samples = np.zeros([height * width, 3], dtype = np.float32)
-        
+
+        count = 0
+        for x in range(height):
+            for y in range(width):
+                training_data_samples[count] = image[x][y]
+                count += 1
+
         # sse : Sum of squared error
         # labels : Array about label, show like 0, 1
         # centers : Cluster centroid array
@@ -226,7 +225,7 @@ class LineDrawing:
     def __init__(self, img):
         self.IMAGE_MAX_BINARY = 255
         self.painting = img
-        self.web = np.zeros(self.original_img.shape) + self.IMAGE_MAX_BINARY
+        self.web = np.zeros(self.painting.shape) + self.IMAGE_MAX_BINARY
         return 
     
     def run(self, outline = True):
@@ -269,7 +268,7 @@ class LineDrawing:
                 self.web[y][x] = np.array([0, 0, 0])
                             
         width = self.web.shape[1] # get Image Width
-        for _, x in enumerate(width - 1):
+        for _, x in enumerate(range(width - 1)):
             # 다음 column과 비교했을 때, 색상이 다른 index 추출
             compare_col = np.array( np.where((self.painting[:,x] == self.painting[:,x+1]) == False))
             for y in np.unique(compare_col[0]):
@@ -291,14 +290,14 @@ class LineDrawing:
 
 if __name__ == "__main__":
     # How to Use?
-    img = cv2.imread("./imagePath/image.jpg")
+    img = cv2.imread("./libs/lala.jpg")
     painting = Painting(img)
     painting_image = painting.run(
                                 k = 8,
                                 is_upscale = True,
                                 size = 2,
                                 blurring = True)
-    
+    cv2.imwrite("./libs/lala-after.jpg", painting_image)
     drawing = LineDrawing(painting_image)
     line_drawn_image = drawing.run(outline = True)
     
