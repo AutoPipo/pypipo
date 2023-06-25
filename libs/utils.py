@@ -3,36 +3,35 @@
 import cv2
 import numpy as np
 
-# 이미지 투명하게
-def set_alpha_on_background_image(base_image, wrap_image, alpha = 0.2):
-    '''
+
+def set_opacity_base_image(base_image, wrap_image, opacity = 0.2):
+    '''Apply opacity base image, and put under the wrap image.
+
     Parameters
     ----------
     base_image : np.ndarray
         Base image
     wrap_image : np.ndarray
         Wrap image on base image
-    alpha : float, optional (default: 0.2)
-        Alpha value apply to base image
+    opacity : float, optional (default: 0.2)
+        Opacity value for base image
 
     Returns
     ----------
     output : np.ndarray
-        Base image applied alpha + wrap_image
+        Base image which is applied opacity and put under the wrap image.
     '''
-    output = cv2.addWeighted(base_image, alpha, wrap_image, (1 - alpha), 0, dtype = cv2.CV_32F)
+    output = cv2.addWeighted(base_image, opacity, wrap_image, (1 - opacity), 0, dtype = cv2.CV_32F)
     return output
 
-
-
 # BGR Color tuple convert to Hex Color String Code
-def bgr2hex(bgr):
+def bgr_to_hex(bgr):
     b, g, r = bgr
     return ('%02x%02x%02x' % (b, g, r)).upper()
     
 # Hex Color String Code convert to BGR Color np.array
-def hex2bgr(hex):
-    return np.array( [int(hex[i:i+2], 16) for i in (4, 2, 0)] ) 
+def hex_to_bgr(hex):
+    return np.array([int(hex[i:i + 2], 16) for i in (4, 2, 0)])
 
 
 
