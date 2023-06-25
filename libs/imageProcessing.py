@@ -2,35 +2,25 @@
 
 import cv2
 import numpy as np
-from numpy.core.numeric import zeros_like
 from scipy.spatial import distance as dist
-import numba
 from tqdm import trange
+from collections import defaultdict
 import sys
 
 
-# 색 리스트 반환 함수 (Minku koo)
-def createColorDict(image):
-    colorDict = {}
+# 색 리스트 반환 함수
+def create_color_location_dict(image):
+    color_location_dict = defaultdict(list)  # key: BGR color, value: (x, y) location at image
     for y, row in enumerate(image):
         for x, bgr in enumerate(row):
-            bgr = tuple(bgr)
-
-            if colorDict == {}:
-                colorDict[ bgr ] = [ (x, y) ]
+            color_location_dict[tuple(bgr)].append((x, y))
             
-            if bgr in colorDict.keys():
-                colorDict[bgr].append( (x, y) )
-
-            else:
-                colorDict[bgr] = [ (x, y) ]
-            
-    return colorDict
+    return color_location_dict
 
 
 # Contour 영역 내에 텍스트 쓰기
 # https://github.com/bsdnoobz/opencv-code/blob/master/shape-detect.cpp
-def setLabel(image, num, pt, radius):
+def set_label_inside_colorspace(image, num, pt, radius):
     fontface = cv2.FONT_HERSHEY_SIMPLEX
 
     scale = 0.5 if radius / 100 < 0.5 else radius / 100 # 0.6
@@ -44,7 +34,7 @@ def setLabel(image, num, pt, radius):
 
 
 # 컨투어 내부의 색을 평균내서 어느 색인지 체크
-def label(image, contour, lab, colorNames):
+def check_avg_color_inside_colorspace(image, contour, lab, colorNames):
     mask = np.zeros(image.shape[:2], dtype="uint8")
 
     cv2.drawContours(mask, [contour], -1, 255, -1)
@@ -61,19 +51,6 @@ def label(image, contour, lab, colorNames):
             minDist = (d, i)
             
     return colorNames[minDist[1]]
-
-
-# 해당 경로에서 이미지를 numpy형태로 반환
-def getImageFromPath(path):
-    return cv2.imread(path)
-
-
-# 해당 이미지에서 색 추출
-def getColorFromImage(img):
-    # 인식할 색 입력
-    temp = [ (idx, color) for (idx, color) in enumerate(   list( createColorDict(img).keys() ),  1   ) ]
-
-    return [str(i[0]) for i in temp], [i[1] for i in temp]
 
 
 # 해당 이미지에서 contours, hierarchy, image_bin 반환
@@ -180,15 +157,24 @@ def setColorNumberFromContours(img, thresh, contours, hierarchy, img_lab, lab, c
             # cv2.circle(img, center, int(radius), (0, 255, 0), 1, cv2.LINE_8, 0)
 
             # 컨투어 내부에 검출된 색을 표시
-            color_text = label(img_lab, contour, lab, colorNames)
+            color_text = check_avg_color_inside_colorspace(img_lab, contour, lab, colorNames)
 
             center_ = (center[0], center[1])
-            setLabel(img, color_text, center_, radius)
+            set_label_inside_colorspace(img, color_text, center_, radius)
             if gif_mode:
                 cv2.imwrite(f'D:/ppt_img/img{str(cnt).zfill(4)}.png', img)
             cnt += 1
 
     return img
+
+
+# 해당 이미지에서 색 추출
+def getColorFromImage(img):
+    # 인식할 색 입력
+    temp = [ (idx, color) for (idx, color) in enumerate(   list( create_color_location_dict(img).keys() ),  1   ) ]
+
+    return [str(i[0]) for i in temp], [i[1] for i in temp]
+
 
 
 def setColorLabel(img, colorNames, colors):
@@ -202,3 +188,6 @@ def setColorLabel(img, colorNames, colors):
         print(colors[idx])
 
     return img
+
+def getImageFromPath(path):
+    return cv2.imread(path)
