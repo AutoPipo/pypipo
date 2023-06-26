@@ -75,10 +75,11 @@ class Painting:
 
         if blurring:
             target_image = self.__blurring(div = div,
-                                         radius = radius,
-                                         sigma_color = sigma_color,
-                                         median_value = median_value,
-                                         step = step)
+                                        #  radius = radius,
+                                         sigma = sigma_color,
+                                        #  median_value = median_value,
+                                        #  step = step
+                                        )
         else:
             target_image = self.original_img.copy()
 
@@ -143,15 +144,12 @@ class Painting:
         sse : float
             Sum of squared error
         """
-        
         height, width = image.shape[:2]
-        training_data_samples = np.zeros([height * width, 3], dtype = np.float32)
-
-        count = 0
-        for x in range(height):
-            for y in range(width):
-                training_data_samples[count] = image[x][y]
-                count += 1
+        
+        # transform color data to use k-means algorithm
+        # need to trnasform into two-dimensional array
+        # [[B, G, R], [B, G, R] ... , [B, G, R]]
+        training_data_samples = image.reshape((height * width, 3)).astype(np.float32)
 
         # sse : Sum of squared error
         # labels : Array about label, show like 0, 1
