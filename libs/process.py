@@ -37,10 +37,7 @@ class Painting:
             # blurring
             blurring = False,
             div = 8, 
-            radius = 10, 
-            sigma_color = 20,
-            median_value = 5,
-            step = 0):
+            sigma_color = 20):
         """Cluster image color with k-means algorithm.
 
         Parameters
@@ -58,49 +55,38 @@ class Painting:
             Blurring image
         div : int, optional (default: 8)
             Reducing numbers of color on image
-        radius : int, optional (default: 10)
-            bilateralFilter Parameter
         sigma_color : int, optional (default: 20)
             bilateralFilter Parameter
-        median_value : int, optional (default: 5)
-            medianBlur Parameter
-        step : int, optional (default: 0)
-            Blurring intensity by step size
 
         Returns
         ----------
         self.painting : np.ndarray
             Color clustered image
+        color_index_map : np.ndarray
+            a Array that contains clustered color indexs.
         """
 
         if blurring:
-            target_image = self.__blurring(div = div,
-                                        #  radius = radius,
-                                         sigma = sigma_color,
-                                        #  median_value = median_value,
-                                        #  step = step
-                                        )
+            target_image = self.__blurring(div, sigma_color)
         else:
             target_image = self.original_img.copy()
 
         if is_upscale:
             target_image = self.__expand_image(target_image, size = size)
         
-        self.painting, sse, color_index_map = self.__cluster_color_with_kmeans(target_image, 
+        self.painting, color_index_map = self.__cluster_color_with_kmeans(target_image, 
                                                             number_of_color = k, 
                                                             attempts = attempts)
         return self.painting, color_index_map
     
-    def __blurring(self, 
-                    div,
-                    sigma):
+    def __blurring(self, div, sigma):
         """Image blurring
 
         Parameters
         ----------
         div : int
             Reducing numbers of color on image
-        sigma_color : int
+        sigma : int
             bilateralFilter Parameter
 
         Returns
@@ -113,7 +99,7 @@ class Painting:
         BILATERAL_FILTER_SIGMACOLOR_MIN = 10
         BILATERAL_FILTER_SIGMACOLOR_MAX = 120
         
-        qimg = self.original_img.copy() # copy original image
+        qimg = self.original_img.copy()  # copy original image
         
         sigma = max(sigma, BILATERAL_FILTER_SIGMACOLOR_MIN)
         sigma = min(sigma, BILATERAL_FILTER_SIGMACOLOR_MAX)
@@ -141,8 +127,6 @@ class Painting:
         ----------
         color_clustered_image : np.ndarray
             Color clustered image
-        sse : float
-            Sum of squared error
         color_index_map : np.ndarray
             a Array that contains clustered color indexs.
         """
@@ -186,7 +170,7 @@ class Painting:
         # for returns
         sse = round(sse ** 0.5 // 10, 2)
         color_clustered_image = res.reshape((image.shape))
-        return color_clustered_image, sse, color_index_map
+        return color_clustered_image, color_index_map
    
     def __expand_image(self, image, size):
         """Expand image size
@@ -205,6 +189,7 @@ class Painting:
             Expanded image
         """
         STANDARD_SIZE_OF_IMAGE = 5000
+
         if size < 1:
             max_image_length = max(image.shape[1], image.shape[0])
             size = (STANDARD_SIZE_OF_IMAGE // max_image_length) + 1
@@ -229,10 +214,9 @@ class LineDrawing:
         Remain only lines from image color boundary, white background
     """
     def __init__(self, color_index_map):
-        self.IMAGE_MAX_BINARY = 255
-
-        self.color_index_map = color_index_map      
-        self.WHITE, self.BLACK = 255, 0
+        self.color_index_map = color_index_map
+        self.WHITE_COLOR = 255
+        self.BLACK_COLOR = 0
     
     def run(self, outline = True):
         """Draw line on image
@@ -279,7 +263,7 @@ class LineDrawing:
         diff = ver_diff + hor_diff
         
         # set pixel color to black if there is a difference
-        web = np.where(diff != 0, self.BLACK, self.WHITE)
+        web = np.where(diff != 0, self.BLACK_COLOR, self.WHITE_COLOR)
         return web
     
     def __draw_outline(self, web):
@@ -301,7 +285,7 @@ class LineDrawing:
             a array that contains each row value diffences.
         """
 
-        diff = np.zeros(map.shape) + self.WHITE
+        diff = np.zeros(map.shape) + self.WHITE_COLOR
 
         # subtracts current row and next row
         for y, row in enumerate(map[:-1]):
@@ -316,10 +300,10 @@ if __name__ == "__main__":
     img = cv2.imread("./libs/lala.jpg")
     painting = Painting(img)
     painting_image, color_index_map = painting.run(
-                                k = 8,
-                                is_upscale = True,
-                                size = 2,
-                                blurring = True)
+                                                k = 8,
+                                                is_upscale = True,
+                                                size = 2,
+                                                blurring = True)
     
     drawing = LineDrawing(color_index_map)
     line_drawn_image = drawing.run(outline = True)
