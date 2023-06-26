@@ -86,10 +86,10 @@ class Painting:
         if is_upscale:
             target_image = self.__expand_image(target_image, size = size)
         
-        self.painting, sse = self.__cluster_color_with_kmeans(target_image, 
+        self.painting, sse, color_index_map = self.__cluster_color_with_kmeans(target_image, 
                                                             number_of_color = k, 
                                                             attempts = attempts)
-        return self.painting
+        return self.painting, color_index_map
     
     def __blurring(self, 
                     div,
@@ -143,6 +143,8 @@ class Painting:
             Color clustered image
         sse : float
             Sum of squared error
+        color_index_map : np.ndarray
+            a Array that contains clustered color indexs.
         """
         height, width = image.shape[:2]
         
@@ -172,6 +174,11 @@ class Painting:
                                         # cv2.KMEANS_USE_INITIAL_LABELS : User selection
                                         flags = cv2.KMEANS_PP_CENTERS)
         
+        # a Array that contains clustered color indexs.
+        # it has same shape as Oringinal image, but the value it contains is a single-dimension.
+        # it will be used to draw line along the colors.
+        color_index_map = labels.reshape((height, width))
+
         centers = np.uint8(centers)
         res = centers[labels.flatten()]
         self.colors = centers
@@ -179,7 +186,7 @@ class Painting:
         # for returns
         sse = round(sse ** 0.5 // 10, 2)
         color_clustered_image = res.reshape((image.shape))
-        return color_clustered_image, sse
+        return color_clustered_image, sse, color_index_map
    
     def __expand_image(self, image, size):
         """Expand image size
@@ -212,19 +219,20 @@ class LineDrawing:
     
     Parameters
     ----------
-    img : np.ndarray
-        Input painting image
+    color_index_map : np.ndarray
+        a Array that contains clustered color indexs.
+        it might be returned from Painting Process.
 
     Attributes
     ----------
     web : np.array
         Remain only lines from image color boundary, white background
     """
-    def __init__(self, img):
+    def __init__(self, color_index_map):
         self.IMAGE_MAX_BINARY = 255
-        self.painting = img
-        self.web = np.zeros(self.painting.shape) + self.IMAGE_MAX_BINARY
-        return 
+
+        self.color_index_map = color_index_map      
+        self.WHITE, self.BLACK = 255, 0
     
     def run(self, outline = True):
         """Draw line on image
@@ -239,12 +247,14 @@ class LineDrawing:
         self.web : np.ndarray
             Gray scale that line drawn on white background image
         """
-        self.__draw_line(self.painting)
+        web = self.__draw_line()
+
         if outline:
-            self.__draw_outline()
-        return self.web
+            web = self.__draw_outline(web)
+            
+        return web
     
-    def __draw_line(self, painting):
+    def __draw_line(self):
         """Draw line with color boundary from painting image
 
         Parameters
@@ -254,48 +264,64 @@ class LineDrawing:
 
         Returns
         ----------
-        self.web : np.ndarray
+        web : np.ndarray
             Gray scale image that line drawn
         """
-        for y, before_row in enumerate(painting[:-1]):
-            next_row = self.painting[y+1]
-            # 다음 row와 비교했을 때, 색상이 다른 index 추출
-            compare_row = np.array( np.where((before_row == next_row) == False))
-            for x in np.unique(compare_row[0]):
-                # Convert to Black
-                self.web[y][x] = np.array([0, 0, 0])
-                            
-        width = self.web.shape[1] # get Image Width
-        for _, x in enumerate(range(width - 1)):
-            # 다음 column과 비교했을 때, 색상이 다른 index 추출
-            compare_col = np.array( np.where((self.painting[:,x] == self.painting[:,x+1]) == False))
-            for y in np.unique(compare_col[0]):
-                # Convert to Black
-                self.web[y][x] = np.array([0, 0, 0])
+
+        # Find color index difference by comparing row and columns.
+        hor_diff = self.__get_diff(self.color_index_map)
+        ver_diff = self.__get_diff(self.color_index_map.T)
+
+        # rotate 90 degree to fit shape with hor_diff
+        ver_diff = ver_diff.T
+
+        # merge horizontal and vertical difference by element-wise operation
+        diff = ver_diff + hor_diff
         
-        # threshold를 이용하여, 2차원 Image로 변환
-        _, self.web = cv2.threshold(self.web, 199, self.IMAGE_MAX_BINARY, cv2.THRESH_BINARY)
-        
-        return self.web
+        # set pixel color to black if there is a difference
+        web = np.where(diff != 0, self.BLACK, self.WHITE)
+        return web
     
-    def __draw_outline(self):
+    def __draw_outline(self, web):
         """Draw outline on image
         """
-        self.web[0:2], self.web[-3:-1], self.web[:,0:2], self.web[:,-3:-1] = 0, 0, 0, 0
-        return
+        web[0:2], web[-3:-1], web[:,0:2], web[:,-3:-1] = 0, 0, 0, 0
+        return web
 
+    def __get_diff(self, map):
+        """Draw outline on image
+        Parameters
+        ----------
+        map : np.ndarray
+            a array that contains simplified color index
+        
+        Returns
+        ---------
+        diff : np.ndarray
+            a array that contains each row value diffences.
+        """
+
+        diff = np.zeros(map.shape) + self.WHITE
+
+        # subtracts current row and next row
+        for y, row in enumerate(map[:-1]):
+            next_row = map[y + 1]
+            diff[y] = row - next_row
+
+        return diff
     
 
 if __name__ == "__main__":
     # How to Use?
     img = cv2.imread("./libs/lala.jpg")
     painting = Painting(img)
-    painting_image = painting.run(
+    painting_image, color_index_map = painting.run(
                                 k = 8,
                                 is_upscale = True,
                                 size = 2,
                                 blurring = True)
-    cv2.imwrite("./libs/lala-after.jpg", painting_image)
-    drawing = LineDrawing(painting_image)
+    
+    drawing = LineDrawing(color_index_map)
     line_drawn_image = drawing.run(outline = True)
+    cv2.imwrite("./libs/lala-after-line-drawn.jpg", line_drawn_image)
     
