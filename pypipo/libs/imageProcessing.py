@@ -91,34 +91,6 @@ def getRadiusCenterCircle(raw_dist):
 
     points = None
 
-    # 넘버링 여러 곳에 하는 기능 개발 중, 주석처리하였음
-
-    # dist_transform = cv2.distanceTransform(raw_dist, cv2.DIST_L2, maskSize=5)
-    # points = [list(dist_transform)[i] for i in range(0, len(dist_transform), 300) if list(dist_transform)[i] > 50]
-    # print(type(list(dist_transform)[50]), list(dist_transform)[50])
-
-    # ret, dist1 = cv2.threshold(dist_transform, 0.6*dist_transform.max(), 255, 0)
-    
-
-    # print(f'dist_transform : {dist_transform}')
-    # print(f'label: {label}')
-
-    # points = []
-    # points = np.where(dist_transform > 10)
-
-
-
-    # for idx in range(0, len(dist_transform)-30, 30):
-    #     _, radius, _, center = cv2.minMaxLoc(dist_transform[idx:idx+30])
-    #     if radius > 10:
-    #         points.append((radius, center))
-
-    # print(np.unique(np.where(label > 10)))
-
-
-    # result = cv2.normalize(dist_transform, None, 255, 0, cv2.NORM_MINMAX, cv2.CV_8UC1)
-    # minVal, maxVal, a, center = cv2.minMaxLoc(result)
-
     return radius, center, points
 
 
