@@ -2,6 +2,8 @@
 
 import cv2
 import numpy as np
+from collections import defaultdict
+from utils import *
 
 class Painting:
     """Change image to painting image.
@@ -23,8 +25,7 @@ class Painting:
 
     def __init__(self, filepath):
         self.original_img = cv2.imread(filepath)
-        self.painting = np.array([])
-        self.colors = np.array([])
+        self.clustered_colors = np.array([])
         return 
     
     def run(self, 
@@ -54,7 +55,7 @@ class Painting:
 
         Returns
         ----------
-        self.painting : np.ndarray
+        painting : np.ndarray
             Color clustered image
         color_index_map : np.ndarray
             a Array that contains clustered color indexs.
@@ -65,10 +66,11 @@ class Painting:
         if is_upscale:
             target_image = self.__expand_image(target_image, target_size = target_size)
         
-        self.painting, color_index_map = self.__cluster_color_with_kmeans(target_image, 
+        painting, color_index_map = self.__cluster_color_with_kmeans(target_image, 
                                                             number_of_color = number, 
                                                             attempts = attempts)
-        return self.painting, color_index_map
+        
+        return painting, color_index_map
     
     def __blurring(self, div, sigma):
         """Image blurring
@@ -156,7 +158,7 @@ class Painting:
 
         centers = np.uint8(centers)
         res = centers[labels.flatten()]
-        self.colors = centers
+        self.clustered_colors = centers
 
         # for returns
         sse = round(sse ** 0.5 // 10, 2)
@@ -187,6 +189,24 @@ class Painting:
 
         output = cv2.resize(image, None, fx = target_size, fy = target_size, interpolation = cv2.INTER_LINEAR)
         return output
+    
+   
+    
+    # 해당 이미지에서 색 추출
+    # TODO: write comment, and clean code
+    def getColorFromImage(self, img):
+        # 색 리스트 반환 함수
+        def create_color_location_dict(image):
+            color_location_dict = defaultdict(list)  # key: BGR color, value: (x, y) location at image
+            for y, row in enumerate(image):
+                for x, bgr in enumerate(row):
+                    color_location_dict[tuple(bgr)].append((x, y))
+                    
+            return color_location_dict
+        # 인식할 색 입력
+        temp = [ (idx, color) for (idx, color) in enumerate(   list( create_color_location_dict(img).keys() ),  1   ) ]
+
+        return [str(i[0]) for i in temp], [i[1] for i in temp]
     
     def save(self, save_path, save_image):
         """Save output image
@@ -298,6 +318,19 @@ class LineDrawing:
 
         return diff
     
+    # TODO: write comment, and clean code
+    def getImgLabelFromImage(self, colors, img):
+        lab = np.zeros((len(colors), 1, 3), dtype="uint8")
+        for i in range(len(colors)):
+            lab[i] = colors[i]
+
+        lab = cv2.cvtColor(lab, cv2.COLOR_BGR2LAB)
+
+        # 색검출할 색공간으로 LAB사용
+        img_lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+
+        return img_lab, lab
+    
     def save(self, save_path, save_image):
         """Save output image
         Parameters
@@ -309,7 +342,25 @@ class LineDrawing:
         """
         cv2.imwrite(save_path, save_image)
         return 
+
+
+class ColorspaceIndexing:
+    """Color indexing at colorspace
     
+    Parameters
+    ----------
+    abc : str
+        explain about abc
+
+    Attributes
+    ----------
+    attr : np.array
+        explain about attr
+    """
+    def __init__(self, web_image, ):
+        return 
+    
+
 
 if __name__ == "__main__":
     # How to Use?
