@@ -22,7 +22,7 @@ class Painting:
         Input original image
     painting : np.array
         Color clustered image (Applied K-Means Algorithm)
-    colors : np.array
+    color_rbg_values : np.array
         Clustered color data list
     """
 
@@ -193,11 +193,9 @@ class Painting:
         output = cv2.resize(image, None, fx = target_size, fy = target_size, interpolation = cv2.INTER_LINEAR)
         return output
     
-   
-    
     # 해당 이미지에서 색 추출
     # TODO: write comment, and clean code
-    def getColorFromImage(self, img):
+    def get_clustered_color_info(self, img):
         # 색 리스트 반환 함수
         def create_color_location_dict(image):
             color_location_dict = defaultdict(list)  # key: BGR color, value: (x, y) location at image
@@ -207,9 +205,12 @@ class Painting:
                     
             return color_location_dict
         # 인식할 색 입력
-        temp = [ (idx, color) for (idx, color) in enumerate(   list( create_color_location_dict(img).keys() ),  1   ) ]
+        color_indexs, color_rbg_values = [], []
+        for idx, color in enumerate(list(create_color_location_dict(img).keys()),  1):
+            color_indexs.append(str(idx))
+            color_rbg_values.append(color)
 
-        return [str(i[0]) for i in temp], [i[1] for i in temp]
+        return color_indexs, color_rbg_values
     
 
 class LineDrawing:
@@ -308,15 +309,15 @@ class LineDrawing:
         return diff
     
     # TODO: write comment, and clean code
-    def getImgLabelFromImage(self, colors, img):
-        lab = np.zeros((len(colors), 1, 3), dtype="uint8")
-        for i in range(len(colors)):
-            lab[i] = colors[i]
+    def get_image_label(self, color_rbg_values, painting_img):
+        lab = np.zeros((len(color_rbg_values), 1, 3), dtype="uint8")
+        for i in range(len(color_rbg_values)):
+            lab[i] = color_rbg_values[i]
 
         lab = cv2.cvtColor(lab, cv2.COLOR_BGR2LAB)
 
         # 색검출할 색공간으로 LAB사용
-        img_lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+        img_lab = cv2.cvtColor(painting_img, cv2.COLOR_BGR2LAB)
 
         return img_lab, lab
     
@@ -326,18 +327,25 @@ class ColorspaceIndexing:
     
     Parameters
     ----------
-    abc : str
+    painting_img : np.ndarray
+        Color clustered image
+    web_img : np.ndarray
+        Line drawn edge of color at color clustered image
+    color_indexs : str
         explain about abc
+    color_rbg_values : tuple
+        RGB values
 
     Attributes
     ----------
     attr : np.array
         explain about attr
     """
-    def __init__(self, painting_img, web_img, color_names):
+    def __init__(self, painting_img, web_img, color_indexs, color_rbg_values):
         self.painting_img = painting_img
         self.web_img = web_img
-        self.color_names = color_names
+        self.color_indexs = color_indexs
+        self.color_rbg_values = color_rbg_values
         self.WHITE_COLOR = 255
 
         self.NUMBERING_MIN_AREA = 80   # numbering minimum area
@@ -353,7 +361,6 @@ class ColorspaceIndexing:
 
         return contours, hierarchy, image_bin
     
-    # TODO:comment
     def set_opacity_base_image(self, base_image, wrap_image, opacity = 0.2):
         '''Apply opacity base image, and put under the wrap image.
 
@@ -396,7 +403,7 @@ class ColorspaceIndexing:
             if distance < min_dist[0]:
                 min_dist = (distance, i)
                 
-        return self.color_names[min_dist[1]]
+        return self.color_indexs[min_dist[1]]
     
     # Contour 영역 내에 텍스트 쓰기
     # https://github.com/bsdnoobz/opencv-code/blob/master/shape-detect.cpp
@@ -450,7 +457,7 @@ class ColorspaceIndexing:
                 # cv2.circle(img, center, int(radius), (0, 255, 0), 1, cv2.LINE_8, 0)
 
                 # 컨투어 내부에 검출된 색을 표시
-                color_text = self.check_avg_color_inside_colorspace(img_lab, contour, lab, self.color_names)
+                color_text = self.check_avg_color_inside_colorspace(img_lab, contour, lab)
 
                 center_ = (center[0], center[1])
                 self.__set_label_inside_colorspace(background_img, color_text, center_, radius)
@@ -458,19 +465,19 @@ class ColorspaceIndexing:
         return background_img
     
     # TODO: comment
-    def __put_color_label_lefttop_side(self, background_img, colors):
+    def __put_color_label_lefttop_side(self, background_img):
         # put color label, at left top side on image
         fontface = cv2.FONT_HERSHEY_SIMPLEX
         scale = 1 # 0.6
         thickness = 2 # 2
 
-        for idx in range(len(colors)):
-            cv2.putText(background_img, self.color_names[idx], (20, 40*(idx+1)), fontface, scale, (50, 50, 50), thickness, 8)
-            cv2.rectangle(background_img, (60, 40*(idx+1)-20), (90, 40*(idx+1)), tuple([int(i) for i in colors[idx]]), -1, 8)
+        for idx in range(len(self.color_rbg_values)):
+            cv2.putText(background_img, self.color_indexs[idx], (20, 40*(idx+1)), fontface, scale, (50, 50, 50), thickness, 8)
+            cv2.rectangle(background_img, (60, 40*(idx+1)-20), (90, 40*(idx+1)), tuple([int(i) for i in self.color_rbg_values[idx]]), -1, 8)
             
         return background_img
     
-    def run(self, img_lab, lab, colors):
+    def run(self, img_lab, lab, color_label = True):
         contours, hierarchy, image_bin = self.__get_contours_information_from_web(self.web_img.copy())
         # 결과 이미지 백지화
         background_img = np.zeros(self.painting_img.copy().shape) + self.WHITE_COLOR
@@ -478,24 +485,9 @@ class ColorspaceIndexing:
 
         # 결과이미지 렌더링
         # output 넣으면 원본이미지에 그려주고, result_img에 넣으면 백지에 그려줌
-        output = self.__numbering_colorspace_from_contours(background_img, image_bin, contours, hierarchy, img_lab, lab, self.color_names)
-        output = self.__put_color_label_lefttop_side(output, self.color_names, colors)
+        output = self.__numbering_colorspace_from_contours(background_img, image_bin, contours, hierarchy, img_lab, lab)
+        if color_label:
+            output = self.__put_color_label_lefttop_side(output)
 
         return output
-    
-
-
-
-if __name__ == "__main__":
-    # How to Use?
-    painting = Painting("./libs/lala.jpg")
-    painting_image, color_index_map = painting.run(
-                                                k = 8,
-                                                is_upscale = True,
-                                                size = 2,
-                                                blurring = True)
-    
-    drawing = LineDrawing(color_index_map)
-    line_drawn_image = drawing.run(outline = True)
-    cv2.imwrite("./libs/lala-after-line-drawn.jpg", line_drawn_image)
     
