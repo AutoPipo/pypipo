@@ -14,8 +14,8 @@ def generate_version(version, prerelease=None, revision=None):
 
 __title__ = "pypipo-py"
 __description__ = "Image convert to PIPO painting canvas automatically."
-__url__ = "https://github.com/AutoPipo/pypipo"
+__url__ = "https://github.com/AutoPipo/pypipo/"
 __version__ = generate_version(VERSION, prerelease=PRERELEASE, revision=REVISION)
 __author__ = "Minku-Koo", "Jiyong-Park"
-__author_email__ = "corleone@kakao.com", "comjiyong@kakao.com"
+__author_email__ = "corleone@kakao.com"
 __license__ = "MIT License"

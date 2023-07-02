@@ -34,8 +34,7 @@ def setup_package():
                     install_requires=requires,
                     classifiers = [
                         'Programming Language :: Python :: 3.6',
-                        'Programming Language :: Python :: 3.7',
-                    ],
+                        'Programming Language :: Python :: 3.7',],
                     )
 
     try:

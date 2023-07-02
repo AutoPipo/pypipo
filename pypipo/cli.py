@@ -64,6 +64,12 @@ def cli(ctx, *args, **kwargs):
     default=20,
     help="bilateralFilter Parameter",
 )
+@click.option(
+    "-c",
+    "--color_label",
+    default=True,
+    help="Show color label at left-top of output image",
+)
 @click.argument("filepath", type=click.Path(exists=True))
 @click.argument("output_path", type=click.Path(writable=True))
 @pass_config
