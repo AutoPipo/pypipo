@@ -2,7 +2,7 @@
 
 import click
 import __version__
-from convert import convert_image
+from convert import pipo_convert
 
 
 class Config(object):
@@ -76,7 +76,7 @@ def cli(ctx, *args, **kwargs):
 def convert(c, *args, **kwargs):
     filepath = kwargs.pop("filepath")
     output_path = kwargs.pop("output_path")
-    output = convert_image(filepath, output_path, **kwargs)
+    output = pipo_convert(filepath, output_path, **kwargs)
 
     click.echo("Image Converting Finished!")
 

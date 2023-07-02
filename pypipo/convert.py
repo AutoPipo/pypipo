@@ -3,7 +3,7 @@
 from libs.process import Painting, LineDrawing, ColorspaceIndexing
 from libs.utils import *
 
-def convert_image(filepath, outputpath, **kwargs):
+def pipo_convert(filepath, outputpath, **kwargs):
     color_label = kwargs.pop("color_label")
     painting = Painting(filepath)
     painting_img, color_index_map = painting.run(**kwargs)
