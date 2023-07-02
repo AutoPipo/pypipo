@@ -1,16 +1,24 @@
-# pypipo
-Python Library to generate PIPO Painting Canvas Image
-
-
-
 <p align="right">
 <a href="https://hits.seeyoufarm.com" ><img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FAutoPipo%2Fpypipo&count_bg=%23AF7EE5&title_bg=%23312D2D&icon=&icon_color=%23E39999&title=visitors&edge_flat=true"/></a>
 </p>
 
+<p align="center">
+  <img src="/pypipo/sample/logo.png" width="30%" title="logo" ></img>
+</p><br>
+
+# pypipo
+### Python library to convert PIPO Painting canvas image
+
+<h3 align="center" >Process Summary</h3>
+<p align="center">
+  <img src="/pypipo/sample/convert-process.gif" width="60%" title="task-process"></img>
+</p>
+
+<!--
 ## 📃 Table of Contents
 - [What is Pipo Painting?](#-what-is-pipo-painting)    
 - [How to Use?](#-how-to-use)   
-  
+  -->
 
 ## 🤔 What is Pipo Painting? 
 
@@ -26,12 +34,26 @@ Python Library to generate PIPO Painting Canvas Image
 [🔗 Coupang Products](https://www.coupang.com/np/search?q=%ED%94%BC%ED%8F%AC%ED%8E%98%EC%9D%B8%ED%8C%85&channel=relate)     
 
 ## ⚙ How to Use?
-
 #### Command Line
 ```
-pip install pypipo
+>>> pip install pypipo
+>>> import pypipo
+>>> output = pypipo.pipo_convert(INPUT_FILE_PATH, OUTPUT_FILE_PATH)
 ```
 
+<h3 align="center" >Input image</h3>
+<p align="center">
+  <img src="/pypipo/sample/sample-image.png" width="50%" title="task-process"></img>
+</p>
 
+<h3 align="center" >Output image</h3>
+<p align="center">
+  <img src="/pypipo/sample/output-image.png" width="50%" title="task-process"></img>
+</p>
+
+
+## 📧 Contact to us
+- [Minku Koo](https://github.com/Minku-Koo) / corleone@kakao.com
+- [Jiyong Park](https://github.com/Ji-yong219) / comjiyong@kakao.com  
 
 
