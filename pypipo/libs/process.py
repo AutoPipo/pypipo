@@ -193,20 +193,32 @@ class Painting:
         output = cv2.resize(image, None, fx = target_size, fy = target_size, interpolation = cv2.INTER_LINEAR)
         return output
     
-    # 해당 이미지에서 색 추출
-    # TODO: write comment, and clean code
-    def get_clustered_color_info(self, img):
-        # 색 리스트 반환 함수
+    def get_clustered_color_info(self, painting_img):
+        '''Extract color at image.
+
+        Parameters
+        ----------
+        painting_img : np.ndarray
+            Color clustered image
+
+        Returns
+        ----------
+        color_indexs : list[str]
+            Color index number list
+        color_rbg_values : np.ndarray
+            Clustered color data list
+        '''
+        
         def create_color_location_dict(image):
+            # Color list return function
             color_location_dict = defaultdict(list)  # key: BGR color, value: (x, y) location at image
             for y, row in enumerate(image):
                 for x, bgr in enumerate(row):
                     color_location_dict[tuple(bgr)].append((x, y))
-                    
             return color_location_dict
-        # 인식할 색 입력
+
         color_indexs, color_rbg_values = [], []
-        for idx, color in enumerate(list(create_color_location_dict(img).keys()),  1):
+        for idx, color in enumerate(list(create_color_location_dict(painting_img).keys()),  1):
             color_indexs.append(str(idx))
             color_rbg_values.append(color)
 
@@ -308,15 +320,30 @@ class LineDrawing:
 
         return diff
     
-    # TODO: write comment, and clean code
-    def get_image_label(self, color_rbg_values, painting_img):
+    def get_image_lab(self, color_rbg_values, painting_img):
+        '''Get inner circle radius, center coordinates
+
+        Parameters
+        ----------
+        color_rbg_values : np.ndarray
+            Clustered color data list
+        painting_img : np.ndarray
+            Color clustered image
+
+        Returns
+        ----------
+        lab_image : np.ndarray
+            @@@
+        lab : np.ndarray
+            @@@
+        '''
         lab = np.zeros((len(color_rbg_values), 1, 3), dtype="uint8")
         for i in range(len(color_rbg_values)):
             lab[i] = color_rbg_values[i]
 
         lab = cv2.cvtColor(lab, cv2.COLOR_BGR2LAB)
 
-        # 색검출할 색공간으로 LAB사용
+        # Use LAB as color space for color detection
         img_lab = cv2.cvtColor(painting_img, cv2.COLOR_BGR2LAB)
 
         return img_lab, lab
@@ -331,15 +358,10 @@ class ColorspaceIndexing:
         Color clustered image
     web_img : np.ndarray
         Line drawn edge of color at color clustered image
-    color_indexs : str
-        explain about abc
-    color_rbg_values : tuple
+    color_indexs : list[str]
+        Color index number list
+    color_rbg_values : list[tuple]
         RGB values
-
-    Attributes
-    ----------
-    attr : np.array
-        explain about attr
     """
     def __init__(self, painting_img, web_img, color_indexs, color_rbg_values):
         self.painting_img = painting_img
@@ -352,13 +374,17 @@ class ColorspaceIndexing:
         self.NUMBERING_MIN_RADIUS = 8  # numbering minimum radius
         return 
     
-    # TODO:comment
     def __get_contours_information_from_web(self, web_image):
-        # 해당 이미지에서 contours, hierarchy, image_bin 반환
-        web_image = web_image.astype(np.uint8)  # have to convert grayscale
-        retval, image_bin = cv2.threshold(web_image, 127,255, cv2.THRESH_BINARY_INV)
-        contours, hierarchy = cv2.findContours(image_bin.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        """Get contours, hierarchy, image_bin from web image
 
+        Parameters
+        ----------
+        web_image : np.ndarray
+            Line drawn image
+        """
+        web_image = web_image.astype(np.uint8)  # have to convert grayscale
+        _, image_bin = cv2.threshold(web_image, 127,255, cv2.THRESH_BINARY_INV)
+        contours, hierarchy = cv2.findContours(image_bin.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         return contours, hierarchy, image_bin
     
     def set_opacity_base_image(self, base_image, wrap_image, opacity = 0.2):
@@ -381,17 +407,42 @@ class ColorspaceIndexing:
         output = cv2.addWeighted(base_image, opacity, wrap_image, (1 - opacity), 0, dtype = cv2.CV_32F)
         return output
     
-    # TODO: comment
     def __get_circle_radius_center(self, raw_dist):
-        # 내접원 반지름, 중심좌표 추출
+        '''Get inner circle radius, center coordinates
+
+        Parameters
+        ----------
+        raw_dist : np.ndarray
+            @@@
+
+        Returns
+        ----------
+        radius : float
+            Radius of inner circle
+        center : tuple
+            Center coordinate of inner circle
+        '''
         dist_transform, _ = cv2.distanceTransformWithLabels(raw_dist, cv2.DIST_L2, maskSize=5)
         _, radius, _, center = cv2.minMaxLoc(dist_transform)
-        points = None
-        return radius, center, points
+        return radius, center
     
-    # TODO: comment
     def check_avg_color_inside_colorspace(self, lab_image, contour, lab):
-        # 컨투어 내부의 색을 평균내서 어느 색인지 체크
+        '''Check which color, through mean of color value in contour.
+
+        Parameters
+        ----------
+        lab_image : np.ndarray
+            @@@
+        contour : np.ndarray
+            @@@
+        lab : np.ndarray
+            @@@
+
+        Returns
+        ----------
+        color_index : str
+            Color index string
+        '''
         mask = np.zeros(lab_image.shape[:2], dtype="uint8")
         cv2.drawContours(mask, [contour], -1, 255, -1)
         mask = cv2.erode(mask, None, iterations=2)
@@ -402,25 +453,40 @@ class ColorspaceIndexing:
             distance = dist.euclidean(row[0], mean)
             if distance < min_dist[0]:
                 min_dist = (distance, i)
-                
-        return self.color_indexs[min_dist[1]]
+        color_index = self.color_indexs[min_dist[1]]
+        return color_index
     
-    # Contour 영역 내에 텍스트 쓰기
-    # https://github.com/bsdnoobz/opencv-code/blob/master/shape-detect.cpp
-    def __set_label_inside_colorspace(self, image, num, pt, radius):
+    def __set_label_inside_colorspace(self, image, num, center_point, radius):
+        '''Put color index string in inner circle center point.
+           https://github.com/bsdnoobz/opencv-code/blob/master/shape-detect.cpp
+
+        Parameters
+        ----------
+        image : np.ndarray
+            Background image
+        num : str
+            Color index string
+        center_point : tuple
+            Coordinate of inner circle center
+        radius : float
+            Radius of inner circle
+
+        Returns
+        ----------
+        None
+        '''
         fontface = cv2.FONT_HERSHEY_SIMPLEX
 
+        # TODO: Create constants as variables
         scale = 0.5 if radius / 100 < 0.5 else radius / 100 # 0.6
         thickness = 1 if scale < 0.8 else 2
-        # thickness = 2 # 2
 
         textsize = cv2.getTextSize(num, fontface, scale, thickness)[0]
-        pt = (int(pt[0]-(textsize[0]/2)+1), int(pt[1]+(textsize[1]/2)))
+        center_point = (int(center_point[0]-(textsize[0]/2)+1), int(center_point[1]+(textsize[1]/2)))
 
-        cv2.putText(image, num, pt, fontface, scale, (150, 150, 150), thickness, 8)
+        cv2.putText(image, num, center_point, fontface, scale, (150, 150, 150), thickness, 8)
         return 
     
-    # TODO: comment
     def __numbering_colorspace_from_contours(self, 
                                              background_img, 
                                              image_bin, 
@@ -428,12 +494,33 @@ class ColorspaceIndexing:
                                              hierarchy, 
                                              img_lab, 
                                              lab):
-        # 컨투어 리스트 Looping
+        '''looping contours list, and put color index label in each contour.
+
+        Parameters
+        ----------
+        background_img : np.ndarray
+            Background image
+        image_bin : np.ndarray
+            @@@
+        contours : tuple
+            @@@
+        hierarchy : np.ndarray
+            @@@
+        img_lab : np.ndarray
+            @@@
+        lab : np.ndarray
+            @@@
+
+        Returns
+        ----------
+        background_img : np.ndarray
+            Image that filled color index string each contours.
+        '''
         # TODO: more faster
         for idx in trange(len(contours), file=sys.stdout, desc='Numbering Process'):
             contour = contours[idx]
 
-            # 면적 
+            # Ignore areas below a certain size
             if cv2.contourArea(contour) < self.NUMBERING_MIN_AREA:
                 continue
 
@@ -444,9 +531,9 @@ class ColorspaceIndexing:
             cv2.fillPoly(raw_dist, pts =[contour], color=(255, 255, 255))
             cv2.fillPoly(raw_dist, pts =[contours[i] for i in chlidren], color=(0, 0, 0))
 
-            radius, center, points = self.__get_circle_radius_center(raw_dist)
+            radius, center = self.__get_circle_radius_center(raw_dist)
 
-            # 반지름 작은거 무시
+            # Ignore radius below a certain length
             if radius < self.NUMBERING_MIN_RADIUS:
                 continue
 
@@ -456,35 +543,63 @@ class ColorspaceIndexing:
                 # 내접원 확인용(주석 풀면 활성화)
                 # cv2.circle(img, center, int(radius), (0, 255, 0), 1, cv2.LINE_8, 0)
 
-                # 컨투어 내부에 검출된 색을 표시
+                # Show the color detected inside the contour
                 color_text = self.check_avg_color_inside_colorspace(img_lab, contour, lab)
 
-                center_ = (center[0], center[1])
-                self.__set_label_inside_colorspace(background_img, color_text, center_, radius)
+                center_point = (center[0], center[1])
+                self.__set_label_inside_colorspace(background_img, color_text, center_point, radius)
                 
         return background_img
     
-    # TODO: comment
     def __put_color_label_lefttop_side(self, background_img):
+        '''Put color label at left top of image.
+
+        Parameters
+        ----------
+        background_img : np.ndarray
+            Background image
+
+        Returns
+        ----------
+        background_img : np.ndarray
+            Image that filled color index label each color.
+        '''
         # put color label, at left top side on image
         fontface = cv2.FONT_HERSHEY_SIMPLEX
-        scale = 1 # 0.6
-        thickness = 2 # 2
+        LINE_SCALE = 1  # 0.6
+        LINE_THICKNESS = 2  # 2
 
         for idx in range(len(self.color_rbg_values)):
-            cv2.putText(background_img, self.color_indexs[idx], (20, 40*(idx+1)), fontface, scale, (50, 50, 50), thickness, 8)
-            cv2.rectangle(background_img, (60, 40*(idx+1)-20), (90, 40*(idx+1)), tuple([int(i) for i in self.color_rbg_values[idx]]), -1, 8)
+            cv2.putText(background_img, self.color_indexs[idx], (20, 40*(idx+1)), 
+                        fontface, LINE_SCALE, (50, 50, 50), LINE_THICKNESS, 8)
+            cv2.rectangle(background_img, (60, 40*(idx+1)-20), (90, 40*(idx+1)), 
+                          tuple([int(i) for i in self.color_rbg_values[idx]]), -1, 8)
             
         return background_img
     
     def run(self, img_lab, lab, color_label = True):
+        '''Main process of this class.
+
+        Parameters
+        ----------
+        img_lab : np.ndarray
+            @@@
+        lab : np.ndarray
+            @@@
+        color_label : bool
+            Whether to display a label
+
+        Returns
+        ----------
+        output : np.ndarray
+            Result image of process
+        '''
         contours, hierarchy, image_bin = self.__get_contours_information_from_web(self.web_img.copy())
-        # 결과 이미지 백지화
+        # Make the output image white
         background_img = np.zeros(self.painting_img.copy().shape) + self.WHITE_COLOR
         background_img = self.set_opacity_base_image(self.painting_img, background_img)
 
-        # 결과이미지 렌더링
-        # output 넣으면 원본이미지에 그려주고, result_img에 넣으면 백지에 그려줌
+        # Rendering output
         output = self.__numbering_colorspace_from_contours(background_img, image_bin, contours, hierarchy, img_lab, lab)
         if color_label:
             output = self.__put_color_label_lefttop_side(output)
