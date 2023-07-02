@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="/pypipo/sample/logo.png" width="30%" title="logo" ></img>
+  <img src="https://github.com/AutoPipo/pypipo/raw/main/pypipo/sample/logo.png" width="30%" title="logo" ></img>
 </p><br>
 
 # pypipo
@@ -11,12 +11,12 @@
 
 <h3 align="center" >Process Summary</h3>
 <p align="center">
-  <img src="/pypipo/sample/convert-process.gif" width="60%" title="task-process"></img>
+  <img src="https://github.com/AutoPipo/pypipo/raw/main/pypipo/sample/convert-process.gif" width="60%" title="task-process"></img>
 </p>
 
 <!--
 ## 📃 Table of Contents
-- [What is Pipo Painting?](#-what-is-pipo-painting)    
+- [hat is Pipo Painting?](#-what-is-pipo-painting)    
 - [How to Use?](#-how-to-use)   
   -->
 
@@ -43,12 +43,12 @@
 
 <h3 align="center" >Input image</h3>
 <p align="center">
-  <img src="/pypipo/sample/sample-image.png" width="50%" title="task-process"></img>
+  <img src="https://github.com/AutoPipo/pypipo/raw/main/pypipo/sample/sample-image.png" width="50%" title="task-process"></img>
 </p>
 
 <h3 align="center" >Output image</h3>
 <p align="center">
-  <img src="/pypipo/sample/output-image.png" width="50%" title="task-process"></img>
+  <img src="https://github.com/AutoPipo/pypipo/raw/main/pypipo/sample/output-image.png" width="50%" title="task-process"></img>
 </p>
 
 
