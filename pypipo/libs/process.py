@@ -70,8 +70,8 @@ class Painting:
             target_image = self.__expand_image(target_image, target_size = target_size)
         
         painting, color_index_map = self.__cluster_color_with_kmeans(target_image, 
-                                                            number_of_color = number, 
-                                                            attempts = attempts)
+                                                                    number_of_color = number, 
+                                                                    attempts = attempts)
         
         return painting, color_index_map
     

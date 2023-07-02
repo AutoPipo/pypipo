@@ -2,7 +2,7 @@
 
 import click
 import __version__
-from convert import convert_image
+from convert import pipo_convert
 
 
 class Config(object):
@@ -64,13 +64,20 @@ def cli(ctx, *args, **kwargs):
     default=20,
     help="bilateralFilter Parameter",
 )
+@click.option(
+    "-c",
+    "--color_label",
+    default=True,
+    help="Show color label at left-top of output image",
+)
 @click.argument("filepath", type=click.Path(exists=True))
 @click.argument("output_path", type=click.Path(writable=True))
 @pass_config
 def convert(c, *args, **kwargs):
     filepath = kwargs.pop("filepath")
     output_path = kwargs.pop("output_path")
-    output = convert_image(filepath, output_path, **kwargs)
+    color_label = kwargs.pop("color_label")
+    output = pipo_convert(filepath, output_path, color_label, **kwargs)
 
     click.echo("Image Converting Finished!")
 

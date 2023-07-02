@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from libs.process import Painting, LineDrawing, ColorspaceIndexing
-from libs.utils import *
+from pypipo.libs.process import Painting, LineDrawing, ColorspaceIndexing
+from pypipo.libs.utils import *
 
-def convert_image(filepath, outputpath, **kwargs):
+def pipo_convert(filepath,
+                 outputpath, 
+                 color_label = True,
+                 **kwargs):
     painting = Painting(filepath)
     painting_img, color_index_map = painting.run(**kwargs)
     color_indexs, color_rbg_values = painting.get_clustered_color_info(painting_img)
@@ -16,7 +19,7 @@ def convert_image(filepath, outputpath, **kwargs):
 
     numbering = ColorspaceIndexing(painting_img, line_drawn_image, color_indexs, color_rbg_values)
     # TODO: add cli, color_label parameter
-    output = numbering.run(img_lab, lab, color_label = True)
+    output = numbering.run(img_lab, lab, color_label = color_label)
     img_save(outputpath, output)
     
     return 
