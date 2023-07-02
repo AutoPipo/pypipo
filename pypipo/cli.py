@@ -68,14 +68,8 @@ def cli(ctx, *args, **kwargs):
 @click.argument("output_path", type=click.Path(writable=True))
 @pass_config
 def convert(c, *args, **kwargs):
-    """explain about this function"""
-    # conf = c.config
-    # number = conf.pop("number")
     filepath = kwargs.pop("filepath")
     output_path = kwargs.pop("output_path")
-    # kwargs.update(conf)
-
-
     output = convert_image(filepath, output_path, **kwargs)
 
     click.echo("Image Converting Finished!")
