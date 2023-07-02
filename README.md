@@ -29,7 +29,7 @@ Python Library to generate PIPO Painting Canvas Image
 
 #### Command Line
 ```
-# write later
+pip install pypipo
 ```
 
 
