@@ -30,8 +30,13 @@ def setup_package():
                     author=about['__author__'],
                     author_email=about['__author_email__'],
                     license=about['__license__'],
-                    packages=find_packages(exclude=('tests',)),
+                    packages=find_packages(exclude=('sample',)),
                     install_requires=requires,
+                    entry_points={
+                        'console_scripts': [
+                            'camelot = camelot.cli:cli',
+                        ],
+                    },
                     classifiers = [
                         'Programming Language :: Python :: 3.6',
                         'Programming Language :: Python :: 3.7',],
