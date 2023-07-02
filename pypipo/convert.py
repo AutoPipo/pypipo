@@ -16,7 +16,7 @@ def convert_image(filepath, outputpath, **kwargs):
     drawing = LineDrawing(color_index_map)
     line_drawn_image = drawing.run(outline = True)
     # TODO: change values name
-    img_lab, lab = drawing.get_image_label(color_rbg_values, painting_img)
+    img_lab, lab = drawing.get_image_lab(color_rbg_values, painting_img)
 
     print('=== Numbering ===')
     numbering = ColorspaceIndexing(painting_img, line_drawn_image, color_indexs, color_rbg_values)
