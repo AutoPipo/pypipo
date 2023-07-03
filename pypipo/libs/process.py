@@ -551,6 +551,7 @@ class ColorspaceIndexing:
                 
         return background_img
     
+    # TODO: size fix by image size
     def __put_color_label_lefttop_side(self, background_img):
         '''Put color label at left top of image.
 

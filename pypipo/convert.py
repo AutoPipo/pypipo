@@ -18,7 +18,6 @@ def pipo_convert(filepath,
     img_lab, lab = drawing.get_image_lab(color_rbg_values, painting_img)
 
     numbering = ColorspaceIndexing(painting_img, line_drawn_image, color_indexs, color_rbg_values)
-    # TODO: add cli, color_label parameter
     output = numbering.run(img_lab, lab, color_label = color_label)
     img_save(outputpath, output)
     
