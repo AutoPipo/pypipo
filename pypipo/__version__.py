@@ -1,4 +1,4 @@
-VERSION = (0, 0, 6)
+VERSION = (0, 0, 7)
 PRERELEASE = None  # alpha, beta or rc
 REVISION = None
 
@@ -12,7 +12,7 @@ def generate_version(version, prerelease=None, revision=None):
     return "".join(version_parts)
 
 
-__title__ = "pypipo-py"
+__title__ = "pypipo"
 __description__ = "Image convert to PIPO painting canvas automatically."
 __url__ = "https://github.com/AutoPipo/pypipo/"
 __version__ = generate_version(VERSION, prerelease=PRERELEASE, revision=REVISION)

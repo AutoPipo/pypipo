@@ -77,7 +77,6 @@ def convert(c, *args, **kwargs):
     filepath = kwargs.pop("filepath")
     output_path = kwargs.pop("output_path")
     color_label = kwargs.pop("color_label")
-    print(kwargs)
     output = pipo_convert(filepath, output_path, color_label, **kwargs)
 
     click.echo("Image Converting Finished!")
