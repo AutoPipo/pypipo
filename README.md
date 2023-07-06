@@ -36,9 +36,10 @@
 ## ⚙ How to Use?
 #### Command Line
 ```
+!pip install pypipo
+
 >>> from pypipo.convert import pipo_convert
 >>> pipo_convert(INPUT_FILE_PATH, OUTPUT_FILE_PATH)
-Numbering Process: 100%|█████████████████████████████████████████████████████████| 123123/123123 [00:01<00:00, 4690.58it/s]
 ```
 
 <h3 align="center" >Input image</h3>
