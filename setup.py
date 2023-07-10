@@ -30,6 +30,7 @@ def setup_package():
                     author=about['__author__'],
                     author_email=about['__author_email__'],
                     license=about['__license__'],
+                    keywords=['pipo painting', 'image painting', 'image processing', 'computer vision'],
                     packages=find_packages(exclude=('sample',)),
                     install_requires=requires,
                     entry_points={

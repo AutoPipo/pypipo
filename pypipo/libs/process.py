@@ -164,7 +164,7 @@ class Painting:
         self.clustered_colors = centers
 
         # for returns
-        sse = round(sse ** 0.5 // 10, 2)
+        # sse = round(sse ** 0.5 // 10, 2)
         color_clustered_image = res.reshape((image.shape))
         return color_clustered_image, color_index_map
    
