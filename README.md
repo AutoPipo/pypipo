@@ -34,13 +34,19 @@
 [🔗 Coupang Products](https://www.coupang.com/np/search?q=%ED%94%BC%ED%8F%AC%ED%8E%98%EC%9D%B8%ED%8C%85&channel=relate)     
 
 ## ⚙ How to Use?
-#### Command Line
+#### Execute on Command Line
+```
+python . convert './sample/lalaland.png' './sample/output.png' -n 16 -u True
+```
+
+#### Execute as Python code
 ```
 !pip install pypipo
 
->>> from pypipo.convert import pipo_convert
->>> pipo_convert(INPUT_FILE_PATH, OUTPUT_FILE_PATH)
+from pypipo.convert import pipo_convert
+pipo_convert(INPUT_FILE_PATH, OUTPUT_FILE_PATH)
 ```
+
 
 <h3 align="center" >Input image</h3>
 <p align="center">
