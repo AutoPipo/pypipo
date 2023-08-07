@@ -1,5 +1,7 @@
 ﻿# -*- coding: utf-8 -*-
 
+from libs.utils import get_in_range, division_filter
+import math
 import cv2
 import sys
 import numpy as np
@@ -34,7 +36,7 @@ class Painting:
     def run(self, 
             number = 16, 
             attempts = 1,
-            is_upscale = False,
+            upscaling_ratio = 3.0,
             target_size = 3,
             div = 8, 
             sigma = 20):
@@ -64,10 +66,9 @@ class Painting:
             a Array that contains clustered color indexs.
         """
 
-        target_image = self.__blurring(div, sigma)
+        target_image = self.__blur_image(div, sigma)
 
-        if is_upscale:
-            target_image = self.__expand_image(target_image, target_size = target_size)
+        target_image = self.__upscale_image(target_image, upscaling_ratio)
         
         painting, color_index_map = self.__cluster_color_with_kmeans(target_image, 
                                                                     number_of_color = number, 
@@ -75,7 +76,7 @@ class Painting:
         
         return painting, color_index_map
     
-    def __blurring(self, div, sigma):
+    def __blur_image(self, div, sigma):
         """Image blurring
 
         Parameters
@@ -91,21 +92,26 @@ class Painting:
             blurred Image
         """
 
-        BILATERAL_FILTER_RADIUS = -1  # Auto decision by sigmaSpace
+        image = self.original_img.copy()  # copy original image
+        height, width = image.shape[:2]
+        
+        # calcuate weights for bilateral filtering
+        BILATERAL_FILTER_BASE_RADIUS = 10
+        img_size_weight = int(math.sqrt(width * height)) // 100
+        radius_weight = min(int(img_size_weight * 1.5), 40)
+
+        BILATERAL_FILTER_RADIUS = BILATERAL_FILTER_BASE_RADIUS + radius_weight
         BILATERAL_FILTER_SIGMACOLOR_MIN = 10
         BILATERAL_FILTER_SIGMACOLOR_MAX = 120
         
-        qimg = self.original_img.copy()  # copy original image
+        sigma = get_in_range(sigma, 
+                             BILATERAL_FILTER_SIGMACOLOR_MIN, 
+                             BILATERAL_FILTER_SIGMACOLOR_MAX)
         
-        sigma = max(sigma, BILATERAL_FILTER_SIGMACOLOR_MIN)
-        sigma = min(sigma, BILATERAL_FILTER_SIGMACOLOR_MAX)
+        blurred_image = cv2.bilateralFilter(image, BILATERAL_FILTER_RADIUS, sigma, sigma)
         
-        # bilateral blurring
-        blurred_image = cv2.bilateralFilter(qimg, BILATERAL_FILTER_RADIUS, sigma, sigma)
-        
-        # reduce numbers of color
-        blurred_image = blurred_image // div * div + div // 2
-        return blurred_image
+        return division_filter(blurred_image, div)
+    
     
     def __cluster_color_with_kmeans(self, image, number_of_color, attempts):
         """Cluster image color with k-means algorithm.
@@ -168,14 +174,14 @@ class Painting:
         color_clustered_image = res.reshape((image.shape))
         return color_clustered_image, color_index_map
    
-    def __expand_image(self, image, target_size):
+    def __upscale_image(self, image, upscaling_ratio):
         """Expand image size
 
         Parameters
         ----------
         image : np.ndarray
             Input image
-        target_size : int
+        upscaling_ratio : float
             Size that want to expand image.
             If you want to guess the proper size, set size value under 1.
 
@@ -184,14 +190,20 @@ class Painting:
         output : np.ndarray
             Expanded image
         """
+
         STANDARD_SIZE_OF_IMAGE = 5000
 
-        if target_size < 1:
-            max_image_length = max(image.shape[1], image.shape[0])
-            target_size = (STANDARD_SIZE_OF_IMAGE // max_image_length) + 1
+        # get proper ratio
+        if upscaling_ratio < 1.0:
+            height, width = image.shape[:2]
+            upscaling_ratio = STANDARD_SIZE_OF_IMAGE / max(height, width)
 
-        output = cv2.resize(image, None, fx = target_size, fy = target_size, interpolation = cv2.INTER_LINEAR)
-        return output
+        if upscaling_ratio != 1.0:
+            upscaled_image = cv2.resize(image, None, 
+                                fx = upscaling_ratio, fy = upscaling_ratio,
+                                interpolation = cv2.INTER_LINEAR)
+        
+        return upscaled_image
     
     def get_clustered_color_info(self, painting_img):
         '''Extract color at image.

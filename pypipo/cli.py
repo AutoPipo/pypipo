@@ -42,14 +42,8 @@ def cli(ctx, *args, **kwargs):
 )
 @click.option(
     "-u",
-    "--is_upscale",
-    default=False,
-    help="Expand size of image",
-)
-@click.option(
-    "-t",
-    "--target_size",
-    default=3,
+    "--upscaling_ratio",
+    default=3.0,
     help="Size that want to expand image.",
 )
 @click.option(

@@ -52,3 +52,34 @@ def img_save(save_path, save_image):
     """
     cv2.imwrite(save_path, save_image)
     return 
+
+
+def division_filter(image, divisor):
+    ''' simplify image pixels with division
+    Parameters
+    ----------
+        image : np.ndarray
+            Input image
+        divisor : int (1 <= divisor <= 255)
+            A value for dividing color pixel values
+
+    Returns
+    ----------
+        image : np.ndarry
+            Blurred image
+    '''
+    divisor = get_in_range(divisor, 1, 255)
+    return image // divisor * divisor + divisor // 2
+
+
+def get_in_range(value, min_value, max_value):
+    ''' check value with min, max
+    Parameters
+    ----------
+        min_value : int
+        max_value : int
+    
+    Returns
+    ----------\
+    '''
+    return min(max(min_value, value), max_value)
