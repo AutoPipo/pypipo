@@ -83,3 +83,18 @@ def get_in_range(value, min_value, max_value):
     ----------\
     '''
     return min(max(min_value, value), max_value)
+
+
+def nearest_odd_integer(value):
+    """
+    Returns the nearest odd integer to the given value.
+
+    Parameters:
+    value (float or int): The input value for which the nearest odd integer should be found.
+
+    Returns:
+    int: The nearest odd integer to the given value. If the input value is itself an odd integer,
+         it will be returned.
+    """
+    nearest_even = round(value)
+    return nearest_even + 1 if nearest_even % 2 == 0 else nearest_even

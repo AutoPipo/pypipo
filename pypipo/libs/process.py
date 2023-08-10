@@ -1,7 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 
-from libs.utils import get_in_range, division_filter
-import math
+from libs.utils import get_in_range, division_filter, nearest_odd_integer
 import cv2
 import sys
 import numpy as np
@@ -36,8 +35,8 @@ class Painting:
     def run(self, 
             number = 16, 
             attempts = 1,
+            blurring_ratio = 0.46,
             upscaling_ratio = 3.0,
-            target_size = 3,
             div = 8, 
             sigma = 20):
         """Cluster image color with k-means algorithm.
@@ -48,11 +47,12 @@ class Painting:
             Number of color clustered
         attempts : int, optional (default: 1)
             How many iterate try to k-means clustering
-        is_upscale : bool, optional (default: False)
-            Expand size of image
-        target_size : int, optional (default: 3)
-            Size that want to expand image.
-            If you want to guess the proper size, set size value under 1.
+        blurring_ratio : float, optional (default: 0.46)
+            ratio that bilateral filter intensity. (0.0 ~ 1.0)
+        upscaling_ratio : float, optional (default: 3.0)
+            ratio that want to expand image.
+            if you want to guess the proper value automatically,
+            set size value under 1.0.
         div : int, optional (default: 8)
             Reducing numbers of color on image
         sigma : int, optional (default: 20)
@@ -65,8 +65,8 @@ class Painting:
         color_index_map : np.ndarray
             a Array that contains clustered color indexs.
         """
-
-        target_image = self.__blur_image(div, sigma)
+        image = self.original_img.copy()  # copy original image
+        target_image = self.__blur_image(image, div, blurring_ratio, sigma)
 
         target_image = self.__upscale_image(target_image, upscaling_ratio)
         
@@ -76,13 +76,17 @@ class Painting:
         
         return painting, color_index_map
     
-    def __blur_image(self, div, sigma):
+    def __blur_image(self, image, div, ratio, sigma):
         """Image blurring
 
         Parameters
         ----------
+        image : np.ndarray
+            Input image
         div : int
             Reducing numbers of color on image
+        ratio : float, optional (default: 0.46)
+            ratio that bilateral filter intensity. (0.0 ~ 1.0)
         sigma : int
             bilateralFilter Parameter
 
@@ -92,27 +96,37 @@ class Painting:
             blurred Image
         """
 
-        image = self.original_img.copy()  # copy original image
         height, width = image.shape[:2]
+        num_of_pixel = width * height
         
-        # calcuate weights for bilateral filtering
-        BILATERAL_FILTER_BASE_RADIUS = 10
-        img_size_weight = int(math.sqrt(width * height)) // 100
-        radius_weight = min(int(img_size_weight * 1.5), 40)
+        BILATERAL_FILTER_MAX_WEIGHT = 5365728
+        BILATERAL_FILTER_WEIGHT_SCALE_FACTOR = 100000000000
 
-        BILATERAL_FILTER_RADIUS = BILATERAL_FILTER_BASE_RADIUS + radius_weight
         BILATERAL_FILTER_SIGMACOLOR_MIN = 10
         BILATERAL_FILTER_SIGMACOLOR_MAX = 120
+
+        # The ratio value should be between 0.0 and 1.0.
+        ratio = get_in_range(ratio, 0.0, 1.0)
+
+        # denormalize bilateral filter weight
+        bilateral_filter_weight = (BILATERAL_FILTER_MAX_WEIGHT * ratio)
         
+        # calcuate proper radius based on image pixels
+        BILATERAL_FILTER_RADIUS_MAX = 49
+        bilateral_filter_radius = min(BILATERAL_FILTER_RADIUS_MAX, 
+                                    nearest_odd_integer(
+                                        num_of_pixel * bilateral_filter_weight 
+                                        / BILATERAL_FILTER_WEIGHT_SCALE_FACTOR
+                                    ))
+                                        
         sigma = get_in_range(sigma, 
                              BILATERAL_FILTER_SIGMACOLOR_MIN, 
                              BILATERAL_FILTER_SIGMACOLOR_MAX)
         
-        blurred_image = cv2.bilateralFilter(image, BILATERAL_FILTER_RADIUS, sigma, sigma)
+        blurred_image = cv2.bilateralFilter(image, bilateral_filter_radius, sigma, sigma)
         
         return division_filter(blurred_image, div)
-    
-    
+        
     def __cluster_color_with_kmeans(self, image, number_of_color, attempts):
         """Cluster image color with k-means algorithm.
 
@@ -143,22 +157,22 @@ class Painting:
         # labels : Array about label, show like 0, 1
         # centers : Cluster centroid array
         sse, labels, centers = cv2.kmeans(
-                                        training_data_samples,  # Align training data, data type = np.float32
-                                        number_of_color,        # number of cluster
-                                        None,                   # Sort the cluster numbers for each sample
-                                        
-                                        # TERM_CRITERIA_EPS : End iteration when a certain accuracy is reached
-                                        # TERM_CRITERIA_MAX_ITER : End iteration after a certain number of iterations
-                                        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 
-                                                    100000, # max_iter : Max number of iterations
-                                                    0.0001), # epsilon : Specific Accuracy Required
-                                        attempts = attempts,  # Number of iterations to run using different initial centroids
-                                        
-                                        # flags : To set the Initial Centroids
-                                        # cv2.KMEANS_RANDOM_CENTERS : Random
-                                        # cv2.KMEANS_PP_CENTERS : K-Means++ Algorithm
-                                        # cv2.KMEANS_USE_INITIAL_LABELS : User selection
-                                        flags = cv2.KMEANS_PP_CENTERS)
+                                training_data_samples,  # Align training data, data type = np.float32
+                                number_of_color,        # number of cluster
+                                None,                   # Sort the cluster numbers for each sample
+                                
+                                # TERM_CRITERIA_EPS : End iteration when a certain accuracy is reached
+                                # TERM_CRITERIA_MAX_ITER : End iteration after a certain number of iterations
+                                criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 
+                                            100000, # max_iter : Max number of iterations
+                                            0.0001), # epsilon : Specific Accuracy Required
+                                attempts = attempts,  # Number of iterations to run using different initial centroids
+                                
+                                # flags : To set the Initial Centroids
+                                # cv2.KMEANS_RANDOM_CENTERS : Random
+                                # cv2.KMEANS_PP_CENTERS : K-Means++ Algorithm
+                                # cv2.KMEANS_USE_INITIAL_LABELS : User selection
+                                flags = cv2.KMEANS_PP_CENTERS)
         
         # a Array that contains clustered color indexs.
         # it has same shape as Oringinal image, but the value it contains is a single-dimension.
@@ -191,6 +205,9 @@ class Painting:
             Expanded image
         """
 
+        if upscaling_ratio == 1.0:
+            return image
+
         STANDARD_SIZE_OF_IMAGE = 5000
 
         # get proper ratio
@@ -198,10 +215,9 @@ class Painting:
             height, width = image.shape[:2]
             upscaling_ratio = STANDARD_SIZE_OF_IMAGE / max(height, width)
 
-        if upscaling_ratio != 1.0:
-            upscaled_image = cv2.resize(image, None, 
-                                fx = upscaling_ratio, fy = upscaling_ratio,
-                                interpolation = cv2.INTER_LINEAR)
+        upscaled_image = cv2.resize(image, None, 
+                            fx = upscaling_ratio, fy = upscaling_ratio,
+                            interpolation = cv2.INTER_LINEAR)
         
         return upscaled_image
     

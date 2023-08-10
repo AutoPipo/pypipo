@@ -47,6 +47,12 @@ def cli(ctx, *args, **kwargs):
     help="Size that want to expand image.",
 )
 @click.option(
+    "-b",
+    "--blurring_ratio",
+    default=0.46,
+    help="ratio that bilateral filter intensity. (0.0 ~ 1.0)"
+)
+@click.option(
     "-d",
     "--div",
     default=8,
