@@ -7,6 +7,8 @@ from tqdm import trange
 from collections import defaultdict
 from scipy.spatial import distance as dist
 
+from .utils import check_range, nearest_odd_integer, division_filter
+
 
 class Painting:
     """Change image to painting image.
@@ -64,7 +66,9 @@ class Painting:
             a Array that contains clustered color indexs.
         """
 
-        target_image = self.__blurring(div, sigma)
+        target_image = self.original_img.copy()
+
+        target_image = self.__blurring(target_image, div, sigma)
 
         if is_upscale:
             target_image = self.__expand_image(target_image, target_size = target_size)
@@ -75,15 +79,20 @@ class Painting:
         
         return painting, color_index_map
     
-    def __blurring(self, div, sigma):
+    def __blurring(self, image, div, sigma, ratio=0.46):
         """Image blurring
 
         Parameters
         ----------
+        image : np.ndarray
+            Input image
         div : int
             Reducing numbers of color on image
         sigma : int
             bilateralFilter Parameter
+        ratio : float, optional (default: 0.46)
+            bilateral filter intensity. 
+            it nomarized by 0.0 ~ 1.0
 
         Returns
         -------
@@ -91,21 +100,36 @@ class Painting:
             blurred Image
         """
 
-        BILATERAL_FILTER_RADIUS = -1  # Auto decision by sigmaSpace
+        height, width = image.shape[:2]
+        
+        # contants for calculating bilateral filter
+        BILATERAL_FILTER_RADIUS_MAX_WEIGHT = 5258414
+        BILATERAL_FILTER_RADIUS_WEIGHT_SCALE_FACTOR = 100000000000
+        
+        # checks that ratio is not outside the normalized range.
+        check_range(ratio, 0.0, 1.0, name="blurring_ratio")
+
+        # denormalize bilateral filter weight
+        bilateral_filter_weight = (BILATERAL_FILTER_RADIUS_MAX_WEIGHT * ratio)
+        
+        # calcuate proper radius based on image pixels
+        num_of_pixel = width * height
+        radius = nearest_odd_integer(
+                    num_of_pixel * bilateral_filter_weight 
+                    / BILATERAL_FILTER_RADIUS_WEIGHT_SCALE_FACTOR
+                )
+
+        # check sigma value
         BILATERAL_FILTER_SIGMACOLOR_MIN = 10
         BILATERAL_FILTER_SIGMACOLOR_MAX = 120
-        
-        qimg = self.original_img.copy()  # copy original image
-        
-        sigma = max(sigma, BILATERAL_FILTER_SIGMACOLOR_MIN)
-        sigma = min(sigma, BILATERAL_FILTER_SIGMACOLOR_MAX)
-        
+        check_range(sigma,
+                    BILATERAL_FILTER_SIGMACOLOR_MIN,
+                    BILATERAL_FILTER_SIGMACOLOR_MAX,
+                    name="sigma")
+
         # bilateral blurring
-        blurred_image = cv2.bilateralFilter(qimg, BILATERAL_FILTER_RADIUS, sigma, sigma)
-        
-        # reduce numbers of color
-        blurred_image = blurred_image // div * div + div // 2
-        return blurred_image
+        blurred_image = cv2.bilateralFilter(image, radius, sigma, sigma)
+        return division_filter(blurred_image, div)
     
     def __cluster_color_with_kmeans(self, image, number_of_color, attempts):
         """Cluster image color with k-means algorithm.

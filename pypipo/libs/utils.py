@@ -41,6 +41,7 @@ def get_number_of_image_color(image):
     number_of_colors = len(colorDict.keys())  
     return number_of_colors
 
+
 def img_save(save_path, save_image):
     """Save output image
     Parameters
@@ -52,3 +53,68 @@ def img_save(save_path, save_image):
     """
     cv2.imwrite(save_path, save_image)
     return 
+
+
+def check_range(value, minimum, maximum, name="input"):
+    """
+    Check if the given value is within the specified range and raise an exception if it's not.
+
+    Parameters
+    ----------
+    value : int or float 
+        The value to be checked.
+    minimum : int or float
+        The allowed minimum value.
+    maximum : int or float
+        The allowed maximum value.
+    name : string, Optional (default="input")
+        The string representing name of value in ValueError message.
+    
+    Raises
+    ----------
+    ValueError
+        Exception raised if the input value is not within the specified range.
+
+    Returns
+    ----------
+    Void
+    """
+    if value < minimum or value > maximum:
+        raise ValueError(f"The {name} value {value} is outside the allowed range ({minimum} ~ {maximum}).")
+    
+
+def nearest_odd_integer(value):
+    """
+    Returns the nearest odd integer to the given value.
+
+    Parameters
+    ----------
+    value : float or int
+        The input value for which the nearest odd integer should be found.
+
+    Returns
+    ----------
+    return : int 
+        The nearest odd integer to the given value. 
+        If the input value is itself an odd integer, it will be returned.
+    """
+    nearest_even = round(value)
+    return nearest_even + 1 if nearest_even % 2 == 0 else nearest_even
+
+
+def division_filter(image, divisor):
+    ''' simplify image pixels with division
+    Parameters
+    ----------
+        image : np.ndarray
+            Input image
+        divisor : int (0 <= divisor <= 255)
+            A value for dividing color pixel values
+
+    Returns
+    ----------
+        image : np.ndarry
+            Blurred image
+    '''
+    check_range(divisor, 0, 255, name="div")
+    return image // divisor * divisor + divisor // 2
