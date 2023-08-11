@@ -7,7 +7,7 @@ from tqdm import trange
 from collections import defaultdict
 from scipy.spatial import distance as dist
 
-from pypipo.libs.utils import check_range, nearest_odd_integer, division_filter
+from pypipo.libs.utils import check_parameter_range, nearest_odd_integer, division_filter
 
 
 class Painting:
@@ -102,13 +102,21 @@ class Painting:
 
         height, width = image.shape[:2]
         
+        # checks that ratio is not outside the normalized range.
+        check_parameter_range(ratio, 0.0, 1.0, name="blurring_ratio")
+
+        # check sigma value
+        BILATERAL_FILTER_SIGMACOLOR_MIN = 10
+        BILATERAL_FILTER_SIGMACOLOR_MAX = 120
+        check_parameter_range(sigma,
+                    BILATERAL_FILTER_SIGMACOLOR_MIN,
+                    BILATERAL_FILTER_SIGMACOLOR_MAX,
+                    name="sigma")
+
         # contants for calculating bilateral filter
         BILATERAL_FILTER_RADIUS_MAX_WEIGHT = 5258414
         BILATERAL_FILTER_RADIUS_WEIGHT_SCALE_FACTOR = 100000000000
         
-        # checks that ratio is not outside the normalized range.
-        check_range(ratio, 0.0, 1.0, name="blurring_ratio")
-
         # denormalize bilateral filter weight
         bilateral_filter_weight = (BILATERAL_FILTER_RADIUS_MAX_WEIGHT * ratio)
         
@@ -119,17 +127,10 @@ class Painting:
                     / BILATERAL_FILTER_RADIUS_WEIGHT_SCALE_FACTOR
                 )
 
-        # check sigma value
-        BILATERAL_FILTER_SIGMACOLOR_MIN = 10
-        BILATERAL_FILTER_SIGMACOLOR_MAX = 120
-        check_range(sigma,
-                    BILATERAL_FILTER_SIGMACOLOR_MIN,
-                    BILATERAL_FILTER_SIGMACOLOR_MAX,
-                    name="sigma")
-
         # bilateral blurring
         blurred_image = cv2.bilateralFilter(image, radius, sigma, sigma)
-        return division_filter(blurred_image, div)
+        blurred_image = division_filter(blurred_image, div)
+        return blurred_image
     
     def __cluster_color_with_kmeans(self, image, number_of_color, attempts):
         """Cluster image color with k-means algorithm.

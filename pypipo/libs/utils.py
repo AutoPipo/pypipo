@@ -55,7 +55,7 @@ def img_save(save_path, save_image):
     return 
 
 
-def check_range(value, minimum, maximum, name="input"):
+def check_parameter_range(value, minimum, maximum, name="input"):
     """
     Check if the given value is within the specified range and raise an exception if it's not.
 
@@ -99,7 +99,8 @@ def nearest_odd_integer(value):
         If the input value is itself an odd integer, it will be returned.
     """
     nearest_even = round(value)
-    return nearest_even + 1 if nearest_even % 2 == 0 else nearest_even
+    nearest_odd = nearest_even + 1 if nearest_even % 2 == 0 else nearest_even
+    return nearest_odd
 
 
 def division_filter(image, divisor):
@@ -113,8 +114,9 @@ def division_filter(image, divisor):
 
     Returns
     ----------
-        image : np.ndarry
+        blurred_image : np.ndarry
             Blurred image
     '''
-    check_range(divisor, 0, 255, name="div")
-    return image // divisor * divisor + divisor // 2
+    check_parameter_range(divisor, 1, 255, name="div")
+    blurred_image =  image // divisor * divisor + divisor // 2
+    return blurred_image
