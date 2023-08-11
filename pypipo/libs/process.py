@@ -7,7 +7,7 @@ from tqdm import trange
 from collections import defaultdict
 from scipy.spatial import distance as dist
 
-from .utils import check_range, nearest_odd_integer, division_filter
+from pypipo.libs.utils import check_range, nearest_odd_integer, division_filter
 
 
 class Painting:
