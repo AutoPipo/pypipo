@@ -99,24 +99,23 @@ class Painting:
         blurred_image : np.ndarray
             blurred Image
         """
-
-        height, width = image.shape[:2]
-        
-        # checks that ratio is not outside the normalized range.
-        check_parameter_range(ratio, 0.0, 1.0, name="blurring_ratio")
-
         # check sigma value
         BILATERAL_FILTER_SIGMACOLOR_MIN = 10
         BILATERAL_FILTER_SIGMACOLOR_MAX = 120
+        # contants for calculating bilateral filter
+        BILATERAL_FILTER_RADIUS_MAX_WEIGHT = 5258414
+        BILATERAL_FILTER_RADIUS_WEIGHT_SCALE_FACTOR = 100000000000
+        
+        height, width = image.shape[:2]
+
+        # checks that ratio is not outside the normalized range.
+        check_parameter_range(ratio, 0.0, 1.0, name="blurring_ratio")
+
         check_parameter_range(sigma,
                     BILATERAL_FILTER_SIGMACOLOR_MIN,
                     BILATERAL_FILTER_SIGMACOLOR_MAX,
                     name="sigma")
 
-        # contants for calculating bilateral filter
-        BILATERAL_FILTER_RADIUS_MAX_WEIGHT = 5258414
-        BILATERAL_FILTER_RADIUS_WEIGHT_SCALE_FACTOR = 100000000000
-        
         # denormalize bilateral filter weight
         bilateral_filter_weight = (BILATERAL_FILTER_RADIUS_MAX_WEIGHT * ratio)
         

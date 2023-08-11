@@ -77,10 +77,12 @@ def check_parameter_range(value, minimum, maximum, name="input"):
 
     Returns
     ----------
-    Void
+    None
     """
     if value < minimum or value > maximum:
         raise ValueError(f"The {name} value {value} is outside the allowed range ({minimum} ~ {maximum}).")
+    
+    return 
     
 
 def nearest_odd_integer(value):
@@ -99,7 +101,7 @@ def nearest_odd_integer(value):
         If the input value is itself an odd integer, it will be returned.
     """
     nearest_even = round(value)
-    nearest_odd = nearest_even + 1 if nearest_even % 2 == 0 else nearest_even
+    nearest_odd = (nearest_even + 1) if (nearest_even % 2 == 0) else nearest_even
     return nearest_odd
 
 
@@ -118,5 +120,5 @@ def division_filter(image, divisor):
             Blurred image
     '''
     check_parameter_range(divisor, 1, 255, name="div")
-    blurred_image =  image // divisor * divisor + divisor // 2
+    blurred_image =  (image // divisor * divisor) + (divisor // 2)
     return blurred_image
