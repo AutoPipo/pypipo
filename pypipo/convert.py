@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from libs.process import Painting, LineDrawing, ColorspaceIndexing
-from libs.utils import *
+from pypipo.libs.process import Painting, LineDrawing, ColorspaceIndexing
+from pypipo.libs.utils import *
 
 def pipo_convert(filepath,
                  outputpath, 
