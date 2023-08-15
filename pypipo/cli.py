@@ -48,9 +48,9 @@ def cli(ctx, *args, **kwargs):
 )
 @click.option(
     "-t",
-    "--target_size",
+    "--upscaling_ratio",
     default=3,
-    help="Size that want to expand image.",
+    help="Magnification Ratio for Upscaling.",
 )
 @click.option(
     "-d",

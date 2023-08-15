@@ -35,7 +35,7 @@ class Painting:
             number = 16, 
             attempts = 1,
             is_upscale = False,
-            target_size = 3,
+            upscaling_ratio = 3.0,
             div = 8, 
             sigma = 20):
         """Cluster image color with k-means algorithm.
@@ -46,6 +46,9 @@ class Painting:
             Number of color clustered
         attempts : int, optional (default: 1)
             How many iterate try to k-means clustering
+        upscaling_ratio : float (default: 3.0)
+            Magnification Ratio for Upscaling.
+            If you want to guess the proper size, set size value less than 1.0
         is_upscale : bool, optional (default: False)
             Expand size of image
         target_size : int, optional (default: 3)
@@ -64,10 +67,10 @@ class Painting:
             a Array that contains clustered color indexs.
         """
 
-        target_image = self.__blurring(div, sigma)
+        target_image = self.__blur_image(div, sigma)
 
         if is_upscale:
-            target_image = self.__expand_image(target_image, target_size = target_size)
+            target_image = self.__upscale_image(target_image, ratio = upscaling_ratio)
         
         painting, color_index_map = self.__cluster_color_with_kmeans(target_image, 
                                                                     number_of_color = number, 
@@ -75,7 +78,7 @@ class Painting:
         
         return painting, color_index_map
     
-    def __blurring(self, div, sigma):
+    def __blur_image(self, div, sigma):
         """Image blurring
 
         Parameters
@@ -168,30 +171,35 @@ class Painting:
         color_clustered_image = res.reshape((image.shape))
         return color_clustered_image, color_index_map
    
-    def __expand_image(self, image, target_size):
+    def __upscale_image(self, image, ratio):
         """Expand image size
 
         Parameters
         ----------
         image : np.ndarray
             Input image
-        target_size : int
-            Size that want to expand image.
-            If you want to guess the proper size, set size value under 1.
+        ratio : float
+            Magnification Ratio Value. 
+            If you want to guess the proper size, set size value less than 1.0
 
         Returns
         ----------
-        output : np.ndarray
-            Expanded image
+        upscaled_image : np.ndarray
+            Upscaled image
         """
+        # handle exception for not upscaling image
+        if (ratio == 1.0): return image
+
         STANDARD_SIZE_OF_IMAGE = 5000
-
-        if target_size < 1:
+        if ratio < 1:
             max_image_length = max(image.shape[1], image.shape[0])
-            target_size = (STANDARD_SIZE_OF_IMAGE // max_image_length) + 1
+            ratio = (STANDARD_SIZE_OF_IMAGE // max_image_length) + 1
 
-        output = cv2.resize(image, None, fx = target_size, fy = target_size, interpolation = cv2.INTER_LINEAR)
-        return output
+        upscaled_image = cv2.resize(image,None, 
+                            fx = ratio, fy = ratio,
+                            interpolation = cv2.INTER_LINEAR)
+        
+        return upscaled_image
     
     def get_clustered_color_info(self, painting_img):
         '''Extract color at image.
