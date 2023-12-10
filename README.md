@@ -44,7 +44,7 @@ python . convert './sample/lalaland.png' './sample/output.png' -n 16 -u True
 !pip install pypipo
 
 from pypipo.convert import pipo_convert
-pipo_convert(INPUT_FILE_PATH, OUTPUT_FILE_PATH)
+PIPO_PAINTED_IMAGE = pipo_convert(COLOR_IMAGE_ARRAY)
 ```
 
 
