@@ -41,16 +41,11 @@ def get_number_of_image_color(image):
     number_of_colors = len(colorDict.keys())  
     return number_of_colors
 
+def img_read(file_path):
+    np_read_image = cv2.imread(file_path)
+    return np_read_image
 
 def img_save(save_path, save_image):
-    """Save output image
-    Parameters
-    ----------
-    save_path : str
-        File path that want to save image
-    save_image : np.ndarray
-        Image object
-    """
     cv2.imwrite(save_path, save_image)
     return 
 

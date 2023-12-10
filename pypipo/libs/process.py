@@ -15,21 +15,19 @@ class Painting:
     
     Parameters
     ----------
-    filepath : str
-        File path that you want to convert
+    np_color_img : np.array
+        3D color image read as numpy
 
     Attributes
     ----------
     original_img : np.array
         Input original image
-    painting : np.array
+    clustered_colors : np.array
         Color clustered image (Applied K-Means Algorithm)
-    color_rbg_values : np.array
-        Clustered color data list
     """
 
-    def __init__(self, filepath):
-        self.original_img = cv2.imread(filepath)
+    def __init__(self, np_color_img):
+        self.original_img = np_color_img
         self.clustered_colors = np.array([])
         return 
     
@@ -564,7 +562,7 @@ class ColorspaceIndexing:
             if center is not None:
                 cv2.drawContours(background_img, [contour], -1, (150, 150, 150), 1)
 
-                # 내접원 확인용(주석 풀면 활성화)
+                # Check Inner circle (Active when remove #)
                 # cv2.circle(img, center, int(radius), (0, 255, 0), 1, cv2.LINE_8, 0)
 
                 # Show the color detected inside the contour

@@ -2,6 +2,7 @@
 
 import click
 import __version__
+from pypipo.libs.utils import *
 from convert import pipo_convert
 
 
@@ -25,6 +26,7 @@ def cli(ctx, *args, **kwargs):
     ctx.obj = Config()
     for key, value in kwargs.items():
         ctx.obj.set_config(key, value)
+    return 
 
 
 @cli.command("convert")
@@ -77,9 +79,11 @@ def convert(c, *args, **kwargs):
     filepath = kwargs.pop("filepath")
     output_path = kwargs.pop("output_path")
     color_label = kwargs.pop("color_label")
-    output = pipo_convert(filepath, output_path, color_label, **kwargs)
+
+    np_color_image = img_read(filepath)
+    output = pipo_convert(np_color_image, color_label, **kwargs)
+    img_save(output_path, output)
 
     click.echo("Image Converting Finished!")
-
     return output
 
