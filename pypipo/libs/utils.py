@@ -117,3 +117,23 @@ def division_filter(image, divisor):
     check_parameter_range(divisor, 1, 255, name="div")
     blurred_image =  (image // divisor * divisor) + (divisor // 2)
     return blurred_image
+
+def set_opacity_base_image(base_image, wrap_image, opacity = 0.3):
+    '''Apply opacity base image, and put under the wrap image.
+
+    Parameters
+    ----------
+    base_image : np.ndarray
+        Base image
+    wrap_image : np.ndarray
+        Wrap image on base image
+    opacity : float, optional (default: 0.3)
+        Opacity value for base image
+
+    Returns
+    ----------
+    output : np.ndarray
+        Base image which is applied opacity and put under the wrap image.
+    '''
+    output = cv2.addWeighted(base_image, opacity, wrap_image, (1 - opacity), 0, dtype = cv2.CV_32F)
+    return output

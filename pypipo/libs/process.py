@@ -385,12 +385,14 @@ class ColorspaceIndexing:
     color_rbg_values : list[tuple]
         RGB values
     """
-    def __init__(self, painting_img, web_img, color_indexs, color_rbg_values):
+    def __init__(self, painting_img, web_img, color_indexs, color_rbg_values, is_dev):
         self.painting_img = painting_img
         self.web_img = web_img
         self.color_indexs = color_indexs
         self.color_rbg_values = color_rbg_values
         self.WHITE_COLOR = 255
+        self.filled_color_inside_web_output = np.zeros(painting_img.shape, dtype=np.uint8)
+        self.is_dev = is_dev
 
         self.NUMBERING_MIN_AREA = 80   # numbering minimum area
         self.NUMBERING_MIN_RADIUS = 8  # numbering minimum radius
@@ -464,6 +466,8 @@ class ColorspaceIndexing:
         ----------
         color_index : str
             Color index string
+        color_value : tuple
+            Color RGB value
         '''
         mask = np.zeros(lab_image.shape[:2], dtype="uint8")
         cv2.drawContours(mask, [contour], -1, 255, -1)
@@ -476,7 +480,8 @@ class ColorspaceIndexing:
             if distance < min_dist[0]:
                 min_dist = (distance, i)
         color_index = self.color_indexs[min_dist[1]]
-        return color_index
+        color_value = self.color_rbg_values[min_dist[1]]
+        return color_index, color_value
     
     def __set_label_inside_colorspace(self, image, num, center_point, radius):
         '''Put color index string in inner circle center point.
@@ -538,8 +543,9 @@ class ColorspaceIndexing:
         background_img : np.ndarray
             Image that filled color index string each contours.
         '''
+        LOOP_DESC = 'Numbering Process'
         # TODO: more faster
-        for idx in trange(len(contours), file=sys.stdout, desc='Numbering Process'):
+        for idx in trange(len(contours), file=sys.stdout, desc=LOOP_DESC):
             contour = contours[idx]
 
             # Ignore areas below a certain size
@@ -566,10 +572,14 @@ class ColorspaceIndexing:
                 # cv2.circle(img, center, int(radius), (0, 255, 0), 1, cv2.LINE_8, 0)
 
                 # Show the color detected inside the contour
-                color_text = self.check_avg_color_inside_colorspace(img_lab, contour, lab)
+                color_text, color_value_bgr = self.check_avg_color_inside_colorspace(img_lab, contour, lab)
 
                 center_point = (center[0], center[1])
                 self.__set_label_inside_colorspace(background_img, color_text, center_point, radius)
+                # dev code
+                if self.is_dev:
+                    color_value_bgr = tuple([int(i) for i in color_value_bgr])
+                    cv2.fillPoly(self.filled_color_inside_web_output, pts=[contour], color=color_value_bgr)
                 
         return background_img
     
@@ -629,3 +639,5 @@ class ColorspaceIndexing:
 
         return output
     
+    def dev_get_result_image(self):
+        return self.filled_color_inside_web_output
