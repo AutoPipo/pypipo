@@ -18,7 +18,7 @@ def pipo_convert(input_color_image, color_label = True, **kwargs):
     return output
 
 # dev code
-def pipo_convert_dev(output_path, input_color_image, color_label = True, is_dev = True, **kwargs):
+def pipo_convert_dev(output_path, input_color_image, color_label = True, is_dev = True, cnt = 0, **kwargs):
     painting = Painting(input_color_image)
     painting_img, color_index_map = painting.run(**kwargs)
     color_indexs, color_rbg_values = painting.get_clustered_color_info(painting_img)
@@ -35,5 +35,6 @@ def pipo_convert_dev(output_path, input_color_image, color_label = True, is_dev 
     img_save(f"{output_path}/sample-output.png", output)
 
     img_save(f"{output_path}/sample-painted-output.png", numbering.dev_get_result_image())
+    img_save(f"{output_path}/image-{cnt+1}.png", numbering.dev_get_result_image())
 
     return output

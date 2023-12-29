@@ -1,4 +1,4 @@
-PAINT_COLOR_RGB_HEX_CODE = [
+PAINT_COLOR_RGB_CODE = [
     (0,0,0),
     (255,255,255),
     (246, 242, 207),
@@ -45,5 +45,5 @@ PAINT_COLOR_RGB_HEX_CODE = [
 ]
 
 def get_fixed_painted_rgb_color_hex():
-    fixed_paint_rgb_list = PAINT_COLOR_RGB_HEX_CODE
-    return rgb_color_hex_list
+    fixed_paint_rgb_list = PAINT_COLOR_RGB_CODE
+    return fixed_paint_rgb_list

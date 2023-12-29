@@ -7,7 +7,7 @@ from tqdm import trange
 from collections import defaultdict
 from scipy.spatial import distance as dist
 
-from pypipo.libs.utils import check_parameter_range, nearest_odd_integer, division_filter
+from pypipo.libs.utils import *
 
 
 class Painting:
@@ -102,7 +102,7 @@ class Painting:
         BILATERAL_FILTER_SIGMACOLOR_MAX = 120
         # contants for calculating bilateral filter
         BILATERAL_FILTER_RADIUS_MAX_WEIGHT = 5258414
-        BILATERAL_FILTER_RADIUS_WEIGHT_SCALE_FACTOR = 100000000000
+        BILATERAL_FILTER_RADIUS_WEIGHT_SCALE_FACTOR = 10 ** 11
         
         height, width = image.shape[:2]
 
@@ -126,7 +126,9 @@ class Painting:
 
         # bilateral blurring
         blurred_image = cv2.bilateralFilter(image, radius, sigma, sigma)
+        blurred_image = cv2.medianBlur(blurred_image, 5)
         blurred_image = division_filter(blurred_image, div)
+        
         return blurred_image
     
     def __cluster_color_with_kmeans(self, image, number_of_color, attempts):
@@ -153,7 +155,7 @@ class Painting:
         # transform color data to use k-means algorithm
         # need to trnasform into two-dimensional array
         # [[B, G, R], [B, G, R] ... , [B, G, R]]
-        training_data_samples = image.reshape((height * width, 3)).astype(np.float32)
+        training_data_samples = image.reshape((-1, 3)).astype(np.float32)
 
         # sse : Sum of squared error
         # labels : Array about label, show like 0, 1
@@ -183,7 +185,7 @@ class Painting:
 
         centers = np.uint8(centers)
         res = centers[labels.flatten()]
-        self.clustered_colors = centers
+        # self.clustered_colors = centers
 
         # for returns
         # sse = round(sse ** 0.5 // 10, 2)
@@ -549,8 +551,8 @@ class ColorspaceIndexing:
             contour = contours[idx]
 
             # Ignore areas below a certain size
-            if cv2.contourArea(contour) < self.NUMBERING_MIN_AREA:
-                continue
+            # if cv2.contourArea(contour) < self.NUMBERING_MIN_AREA:
+            #     continue
 
             chlidren = [i for i, hierarchy_obj in enumerate(hierarchy[0]) if hierarchy_obj[3] == idx]
 
@@ -562,8 +564,8 @@ class ColorspaceIndexing:
             radius, center = self.__get_circle_radius_center(raw_dist)
 
             # Ignore radius below a certain length
-            if radius < self.NUMBERING_MIN_RADIUS:
-                continue
+            # if radius < self.NUMBERING_MIN_RADIUS:
+            #     continue
 
             if center is not None:
                 cv2.drawContours(background_img, [contour], -1, (150, 150, 150), 1)
@@ -579,6 +581,9 @@ class ColorspaceIndexing:
                 # dev code
                 if self.is_dev:
                     color_value_bgr = tuple([int(i) for i in color_value_bgr])
+                    log_to_file(f"before:{color_value_bgr}")
+                    color_value_bgr = find_most_similar_paint_rgb_color(color_value_bgr)
+                    log_to_file(f"after:{color_value_bgr}")
                     cv2.fillPoly(self.filled_color_inside_web_output, pts=[contour], color=color_value_bgr)
                 
         return background_img
