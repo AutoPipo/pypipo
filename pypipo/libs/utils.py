@@ -1,7 +1,11 @@
 ﻿# -*- coding: utf-8 -*-
 
 import cv2
+import math
+import colorsys
 import numpy as np
+from datetime import datetime
+from .paint_color_rgb_code  import *
 
 # BGR Color tuple convert to Hex Color String Code
 def bgr_to_hex(bgr):
@@ -137,3 +141,64 @@ def set_opacity_base_image(base_image, wrap_image, opacity = 0.3):
     '''
     output = cv2.addWeighted(base_image, opacity, wrap_image, (1 - opacity), 0, dtype = cv2.CV_32F)
     return output
+
+def rgb_to_hsl(bgr):
+    RGB_TO_HSL_DIVIDED = 255.0
+    b, g, r = [(x / RGB_TO_HSL_DIVIDED) for x in bgr]
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    return h * 360, s * 100, l * 100
+
+def hsl_to_rgb(hsl):
+    h, s, l = hsl
+    h /= 360.0  # Hue를 0에서 1 사이의 값으로 정규화
+    s /= 100.0  # Saturation을 0에서 1 사이의 값으로 정규화
+    l /= 100.0  # Lightness를 0에서 1 사이의 값으로 정규화
+    r, g, b = colorsys.hls_to_rgb(h, l, s)
+    return int(b * 255), int(g * 255), int(r * 255)
+
+def get_color_distance(color1, color2):
+    v1, v2, v3 = color1
+    p1, p2, p3 = color2
+    distance = math.sqrt((v1 - p1)**2 + (v2 - p2)**2 + (v3 - p3)**2)
+    return distance
+
+def find_closest_color(target_color, color_list):
+    min_distance = float('inf')
+    closest_color = None
+
+    for color in color_list:
+        distance = get_color_distance(target_color, color)
+        if distance < min_distance:
+            min_distance = distance
+            closest_color = color
+
+    return closest_color
+
+def find_most_similar_paint_rgb_color(color_rgb):
+    # fixed_paint_rgb_list = get_fixed_painted_rgb_color_hex()
+    fixed_paint_hsl_list = [rgb_to_hsl(color) for color in get_fixed_painted_rgb_color_hex()]
+    target_color_hsl = rgb_to_hsl(color_rgb)
+    matched_color = find_closest_color(target_color_hsl, fixed_paint_hsl_list)
+    matched_color = hsl_to_rgb(matched_color)
+    return matched_color
+
+def log_to_file(message, level='info', file_path='log.txt'):
+    """
+    파일에 로그를 작성하는 함수
+
+    Parameters:
+    - message (str): 작성할 로그 메시지
+    - level (str): 로그 레벨 (기본값: 'info')
+    - file_path (str): 로그를 작성할 파일 경로 (기본값: 'log.txt')
+    """
+    levels = ['info', 'warning', 'error']
+
+    if level not in levels:
+        raise ValueError("Invalid log level. Use one of: {}".format(', '.join(levels)))
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_message = "[{}] [{}] {}".format(timestamp, level.upper(), message)
+
+    with open(file_path, 'a') as file:
+        file.write(log_message + '\n')
+
