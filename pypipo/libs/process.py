@@ -582,7 +582,7 @@ class ColorspaceIndexing:
                 if self.is_dev:
                     color_value_bgr = tuple([int(i) for i in color_value_bgr])
                     log_to_file(f"before:{color_value_bgr}")
-                    color_value_bgr = find_most_similar_paint_rgb_color(color_value_bgr)
+                    color_value_bgr = find_most_similar_paint_bgr_color(color_value_bgr)
                     log_to_file(f"after:{color_value_bgr}")
                     cv2.fillPoly(self.filled_color_inside_web_output, pts=[contour], color=color_value_bgr)
                 
