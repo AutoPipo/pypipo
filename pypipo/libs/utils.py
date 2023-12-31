@@ -170,6 +170,7 @@ def bgr_to_hsl(bgr):
     h *= MAX_HUE
     l *= MAX_SATURATION_LIGHTNESS
     s *= MAX_SATURATION_LIGHTNESS
+    
     return h, s, l
 
 def hsl_to_bgr(hsl):
@@ -300,7 +301,6 @@ def find_most_similar_paint_bgr_color(target_bgr_color):
     most_similar_bgr_color = lab_to_bgr(closest_color_lab)
     
     return most_similar_bgr_color
-
 
 def log_to_file(message, level='info', file_path='log.txt'):
     """
