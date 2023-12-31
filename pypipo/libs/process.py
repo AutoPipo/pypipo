@@ -610,8 +610,14 @@ class ColorspaceIndexing:
         for idx in range(len(self.color_rbg_values)):
             cv2.putText(background_img, self.color_indexs[idx], (20, 40*(idx+1)), 
                         fontface, LINE_SCALE, (50, 50, 50), LINE_THICKNESS, 8)
-            cv2.rectangle(background_img, (60, 40*(idx+1)-20), (90, 40*(idx+1)), 
-                          tuple([int(i) for i in self.color_rbg_values[idx]]), -1, 8)
+            if self.is_dev:
+                
+                color_value_bgr = find_most_similar_paint_bgr_color(tuple([int(i) for i in self.color_rbg_values[idx]]))
+                cv2.rectangle(background_img, (60, 40*(idx+1)-20), (90, 40*(idx+1)), 
+                            color_value_bgr, -1, 8)
+            else:
+                cv2.rectangle(background_img, (60, 40*(idx+1)-20), (90, 40*(idx+1)), 
+                            tuple([int(i) for i in self.color_rbg_values[idx]]), -1, 8)
             
         return background_img
     

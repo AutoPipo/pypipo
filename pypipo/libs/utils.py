@@ -5,12 +5,15 @@ import math
 import colorsys
 import numpy as np
 from datetime import datetime
+
+from ._colormath.color_objects import *
+from ._colormath.color_conversions import convert_color
+from ._colormath.color_diff import delta_e_cie2000
 from .paint_color_rgb_code  import *
 
-
-MAX_RGB_VALUE = 255.0
-MAX_HUE = 360.0
-MAX_SATURATION_LIGHTNESS = 100.0
+MAX_RGB_VALUE = 255
+MAX_HUE = 360
+MAX_SATURATION_LIGHTNESS = 100
 
 # BGR Color tuple convert to Hex Color String Code
 def bgr_to_hex(bgr):
@@ -58,7 +61,6 @@ def img_save(save_path, save_image):
     cv2.imwrite(save_path, save_image)
     return 
 
-
 def check_parameter_range(value, minimum, maximum, name="input"):
     """
     Check if the given value is within the specified range and raise an exception if it's not.
@@ -88,7 +90,6 @@ def check_parameter_range(value, minimum, maximum, name="input"):
     
     return 
     
-
 def nearest_odd_integer(value):
     """
     Returns the nearest odd integer to the given value.
@@ -107,7 +108,6 @@ def nearest_odd_integer(value):
     nearest_even = round(value)
     nearest_odd = (nearest_even + 1) if (nearest_even % 2 == 0) else nearest_even
     return nearest_odd
-
 
 def division_filter(image, divisor):
     ''' simplify image pixels with division
@@ -170,7 +170,8 @@ def bgr_to_hsl(bgr):
     h *= MAX_HUE
     l *= MAX_SATURATION_LIGHTNESS
     s *= MAX_SATURATION_LIGHTNESS
-    return h, l, s
+    
+    return h, s, l
 
 def hsl_to_bgr(hsl):
     '''
@@ -204,79 +205,102 @@ def hsl_to_bgr(hsl):
 
     return b_int, g_int, r_int
 
-
-def get_color_distance(color1, color2):
-    '''
-    Calculate the Euclidean distance between two colors in either RGB or HSL format.
-
-    Parameters
-    ----------
-    color1 : tuple[float, float, float]
-        RGB or HSL values of the first color.
-    color2 : tuple[float, float, float]
-        RGB or HSL values of the second color.
-
-    Returns
-    -------
-    distance : float
-        Euclidean distance between the two colors.
-    '''
-    v1, v2, v3 = color1
-    p1, p2, p3 = color2
-    distance = math.sqrt((v1 - p1)**2 + (v2 - p2)**2 + (v3 - p3)**2)
-    return distance
-
 def find_closest_color(target_color, color_list):
     '''
-    Find the closest color to the target color in a list, considering either RGB or HSL format.
+    Find the closest color to the target color in a list, with CIE2000.
 
     Parameters
     ----------
     target_color : tuple[float, float, float]
-        RGB or HSL values of the target color.
+        RGB values of the target color.
     color_list : list[tuple[float, float, float]]
-        List of RGB or HSL values representing colors.
+        List of RGB values representing colors.
 
     Returns
     -------
     closest_color : tuple[float, float, float]
-        RGB or HSL values of the color closest to the target color.
+        RGB values of the color closest to the target color.
     '''
     min_distance = float('inf')
     closest_color = None
 
     for color in color_list:
-        distance = get_color_distance(target_color, color)
+        distance = delta_e_cie2000(target_color, color)
         if distance < min_distance:
             min_distance = distance
             closest_color = color
 
     return closest_color
 
-def find_most_similar_paint_bgr_color(color_bgr):
+def lab_to_bgr(lab_color):
     '''
-    Find the most similar paint color in BGR format to the provided BGR color.
+    Lab Object convert to BGR value.
 
     Parameters
     ----------
-    color_bgr : tuple[int, int, int]
+    lab_color : LAB Object
+
+    Returns
+    -------
+        tuple[int, int, int]
+            BGR values
+    '''
+    # Convert LAB to BGR
+    rgb_color = convert_color(lab_color, sRGBColor)
+
+    # Ensure RGB values are within the valid range [0, 1]
+    r = _clamp_rgb_value(rgb_color.rgb_r)
+    g = _clamp_rgb_value(rgb_color.rgb_g)
+    b = _clamp_rgb_value(rgb_color.rgb_b)
+
+    # Scale to the range [0, 255]
+    r, g, b = _scale_to_255(r, g, b)
+
+    return b, g, r
+
+def _clamp_rgb_value(value):
+    # Ensure RGB value is within the valid range [0, 1]
+    return max(0, min(value, 1))
+
+def _scale_to_255(*values):
+    # Scale values to the range [0, 255]
+    return tuple(int(v * MAX_RGB_VALUE) for v in values)
+
+def bgr_to_lab(bgr):
+    '''
+    BGR value convert to Lab Object.
+    '''
+    lab = convert_color(sRGBColor(bgr[2]/MAX_RGB_VALUE, 
+                                bgr[1]/MAX_RGB_VALUE, 
+                                bgr[0]/MAX_RGB_VALUE), 
+                        LabColor)
+    return  lab
+
+def find_most_similar_paint_bgr_color(target_bgr_color):
+    '''
+    Find the most similar paint color to the given BGR color.
+
+    Parameters
+    ----------
+    target_bgr_color : tuple[int, int, int]
         BGR values of the target color.
 
     Returns
     -------
-    matched_color_bgr : tuple[int, int, int]
+    most_similar_bgr_color : tuple[int, int, int]
         BGR values of the most similar paint color.
     '''
-    # Get a list of fixed paint colors in HSL format
-    fixed_paint_hsl_list = [bgr_to_hsl(color) for color in get_fixed_painted_rgb_color_hex()]
-    # Convert the target color to HSL format
-    target_color_hsl = bgr_to_hsl(color_bgr)
-    # Find the closest color in HSL format
-    matched_color_hsl = find_closest_color(target_color_hsl, fixed_paint_hsl_list)
-    # Convert the closest color back to BGR format
-    matched_color_bgr = hsl_to_bgr(matched_color_hsl)
 
-    return matched_color_bgr
+    # Convert the list of paint colors to Lab format
+    fixed_paint_color_lab_list = [bgr_to_lab(tuple(reversed(color))) for color in get_fixed_painted_rgb_color_hex()]
+    # Convert the target color to Lab format
+    target_lab_color = bgr_to_lab(target_bgr_color)
+    # Find the closest paint color
+    closest_color_lab = find_closest_color(target_lab_color, fixed_paint_color_lab_list)
+    # Convert the found color in Lab format to BGR
+    most_similar_bgr_color = lab_to_bgr(closest_color_lab)
+    
+    return most_similar_bgr_color
 
 def log_to_file(message, level='info', file_path='log.txt'):
     """
@@ -316,3 +340,4 @@ def log_to_file(message, level='info', file_path='log.txt'):
         file.write(log_message + '\n')
 
     return
+
