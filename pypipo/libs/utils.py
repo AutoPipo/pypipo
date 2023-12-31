@@ -7,6 +7,11 @@ import numpy as np
 from datetime import datetime
 from .paint_color_rgb_code  import *
 
+
+MAX_RGB_VALUE = 255.0
+MAX_HUE = 360.0
+MAX_SATURATION_LIGHTNESS = 100.0
+
 # BGR Color tuple convert to Hex Color String Code
 def bgr_to_hex(bgr):
     b, g, r = bgr
@@ -142,27 +147,101 @@ def set_opacity_base_image(base_image, wrap_image, opacity = 0.3):
     output = cv2.addWeighted(base_image, opacity, wrap_image, (1 - opacity), 0, dtype = cv2.CV_32F)
     return output
 
-def rgb_to_hsl(bgr):
-    RGB_TO_HSL_DIVIDED = 255.0
-    b, g, r = [(x / RGB_TO_HSL_DIVIDED) for x in bgr]
-    h, l, s = colorsys.rgb_to_hls(r, g, b)
-    return h * 360, s * 100, l * 100
+def bgr_to_hsl(bgr):
+    '''
+    Convert BGR to HSL.
 
-def hsl_to_rgb(hsl):
+    Parameters
+    ----------
+    bgr : tuple[int, int, int]
+        BGR value
+
+    Returns
+    -------
+    hsl : tuple[float, float, float]
+        HSL value
+    '''
+    # Normalize BGR values to the range between 0 and 1
+    b, g, r = [x / MAX_RGB_VALUE for x in bgr]
+    # Convert BGR to HSL using the colorsys library
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+
+    # Convert h, l, s to the specified format
+    h *= MAX_HUE
+    l *= MAX_SATURATION_LIGHTNESS
+    s *= MAX_SATURATION_LIGHTNESS
+    return h, l, s
+
+def hsl_to_bgr(hsl):
+    '''
+    Convert HSL to BGR.
+
+    Parameters
+    ----------
+    hsl : tuple[float, float, float]
+        HSL values (Hue, Saturation, Lightness)
+
+    Returns
+    -------
+    bgr : tuple[int, int, int]
+        BGR values (Blue, Green, Red)
+    '''
+    # Unpack HSL values
     h, s, l = hsl
-    h /= 360.0  # Hue를 0에서 1 사이의 값으로 정규화
-    s /= 100.0  # Saturation을 0에서 1 사이의 값으로 정규화
-    l /= 100.0  # Lightness를 0에서 1 사이의 값으로 정규화
-    r, g, b = colorsys.hls_to_rgb(h, l, s)
-    return int(b * 255), int(g * 255), int(r * 255)
+
+    # Normalize H, S, L values to the range between 0 and 1
+    h_normalized = h / MAX_HUE
+    s_normalized = s / MAX_SATURATION_LIGHTNESS
+    l_normalized = l / MAX_SATURATION_LIGHTNESS
+
+    # Convert HSL to RGB using the colorsys library
+    r, g, b = colorsys.hls_to_rgb(h_normalized, l_normalized, s_normalized)
+
+    # Convert RGB values to the range between 0 and 255
+    r_int = int(r * MAX_RGB_VALUE)
+    g_int = int(g * MAX_RGB_VALUE)
+    b_int = int(b * MAX_RGB_VALUE)
+
+    return b_int, g_int, r_int
+
 
 def get_color_distance(color1, color2):
+    '''
+    Calculate the Euclidean distance between two colors in either RGB or HSL format.
+
+    Parameters
+    ----------
+    color1 : tuple[float, float, float]
+        RGB or HSL values of the first color.
+    color2 : tuple[float, float, float]
+        RGB or HSL values of the second color.
+
+    Returns
+    -------
+    distance : float
+        Euclidean distance between the two colors.
+    '''
     v1, v2, v3 = color1
     p1, p2, p3 = color2
     distance = math.sqrt((v1 - p1)**2 + (v2 - p2)**2 + (v3 - p3)**2)
     return distance
 
 def find_closest_color(target_color, color_list):
+    '''
+    Find the closest color to the target color in a list, considering either RGB or HSL format.
+
+    Parameters
+    ----------
+    target_color : tuple[float, float, float]
+        RGB or HSL values of the target color.
+    color_list : list[tuple[float, float, float]]
+        List of RGB or HSL values representing colors.
+
+    Returns
+    -------
+    closest_color : tuple[float, float, float]
+        RGB or HSL values of the color closest to the target color.
+    '''
     min_distance = float('inf')
     closest_color = None
 
@@ -174,22 +253,56 @@ def find_closest_color(target_color, color_list):
 
     return closest_color
 
-def find_most_similar_paint_rgb_color(color_rgb):
-    # fixed_paint_rgb_list = get_fixed_painted_rgb_color_hex()
-    fixed_paint_hsl_list = [rgb_to_hsl(color) for color in get_fixed_painted_rgb_color_hex()]
-    target_color_hsl = rgb_to_hsl(color_rgb)
-    matched_color = find_closest_color(target_color_hsl, fixed_paint_hsl_list)
-    matched_color = hsl_to_rgb(matched_color)
-    return matched_color
+def find_most_similar_paint_bgr_color(color_bgr):
+    '''
+    Find the most similar paint color in BGR format to the provided BGR color.
+
+    Parameters
+    ----------
+    color_bgr : tuple[int, int, int]
+        BGR values of the target color.
+
+    Returns
+    -------
+    matched_color_bgr : tuple[int, int, int]
+        BGR values of the most similar paint color.
+    '''
+    # Get a list of fixed paint colors in HSL format
+    fixed_paint_hsl_list = [bgr_to_hsl(color) for color in get_fixed_painted_rgb_color_hex()]
+    # Convert the target color to HSL format
+    target_color_hsl = bgr_to_hsl(color_bgr)
+    # Find the closest color in HSL format
+    matched_color_hsl = find_closest_color(target_color_hsl, fixed_paint_hsl_list)
+    # Convert the closest color back to BGR format
+    matched_color_bgr = hsl_to_bgr(matched_color_hsl)
+
+    return matched_color_bgr
 
 def log_to_file(message, level='info', file_path='log.txt'):
     """
-    파일에 로그를 작성하는 함수
+    Write logs to a file.
 
-    Parameters:
-    - message (str): 작성할 로그 메시지
-    - level (str): 로그 레벨 (기본값: 'info')
-    - file_path (str): 로그를 작성할 파일 경로 (기본값: 'log.txt')
+    Parameters
+    ----------
+    message : str
+        Log message to be written.
+    level : str, optional
+        Log level (default : 'info')
+    file_path : str, optional
+        File path for writing logs (default : 'log.txt')
+
+    Raises
+    ------
+    ValueError
+        If an invalid log level is provided.
+
+    Notes
+    -----
+    This function appends logs to the specified file, formatted with a timestamp and log level.
+
+    Returns
+    -------
+    None
     """
     levels = ['info', 'warning', 'error']
 
@@ -202,3 +315,4 @@ def log_to_file(message, level='info', file_path='log.txt'):
     with open(file_path, 'a') as file:
         file.write(log_message + '\n')
 
+    return
