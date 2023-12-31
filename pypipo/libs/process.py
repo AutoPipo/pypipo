@@ -387,7 +387,7 @@ class ColorspaceIndexing:
     color_rbg_values : list[tuple]
         RGB values
     """
-    def __init__(self, painting_img, web_img, color_indexs, color_rbg_values, is_dev):
+    def __init__(self, painting_img, web_img, color_indexs, color_rbg_values, is_dev = False):
         self.painting_img = painting_img
         self.web_img = web_img
         self.color_indexs = color_indexs
