@@ -5,12 +5,27 @@ import math
 import colorsys
 import numpy as np
 from datetime import datetime
+
+from colormath.color_objects import sRGBColor, LabColor
+from colormath.color_conversions import convert_color
+from colormath.color_diff import delta_e_cie2000
+
 from .paint_color_rgb_code  import *
 
 
 MAX_RGB_VALUE = 255.0
 MAX_HUE = 360.0
 MAX_SATURATION_LIGHTNESS = 100.0
+
+# Constants for weights
+HUE_WEIGHT = 0.5
+SATURATION_WEIGHT = 0.3
+LIGHTNESS_WEIGHT = 0.2
+
+# Constants for normalization
+HUE_NORMALIZATION = 180.0
+SATURATION_NORMALIZATION = 100.0
+LIGHTNESS_NORMALIZATION = 100.0
 
 # BGR Color tuple convert to Hex Color String Code
 def bgr_to_hex(bgr):
@@ -170,7 +185,7 @@ def bgr_to_hsl(bgr):
     h *= MAX_HUE
     l *= MAX_SATURATION_LIGHTNESS
     s *= MAX_SATURATION_LIGHTNESS
-    return h, l, s
+    return h, s, l
 
 def hsl_to_bgr(hsl):
     '''
@@ -204,6 +219,52 @@ def hsl_to_bgr(hsl):
 
     return b_int, g_int, r_int
 
+
+def rgb_to_lab(rgb):
+    b, g, r = [x / 255.0 for x in rgb]
+    r = _gamma_correction(r)
+    g = _gamma_correction(g)
+    b = _gamma_correction(b)
+
+    x = r * 0.4124564 + g * 0.3575761 + b * 0.1804375
+    y = r * 0.2126729 + g * 0.7151522 + b * 0.0721750
+    z = r * 0.0193339 + g * 0.1191920 + b * 0.9503041
+
+    x /= 0.95047
+    y /= 1.00000
+    z /= 1.08883
+
+    x = _xyz_to_lab(x)
+    y = _xyz_to_lab(y)
+    z = _xyz_to_lab(z)
+
+    l = max(0.0, 116.0 * y - 16.0)
+    a = (x - y) * 500.0
+    b = (y - z) * 200.0
+
+    return l, a, b
+
+def color_difference_cie76(color1, color2):
+    l1, a1, b1 = color1
+    l2, a2, b2 = color2
+
+    delta_l = l2 - l1
+    delta_a = a2 - a1
+    delta_b = b2 - b1
+
+    return math.sqrt(delta_l**2 + delta_a**2 + delta_b**2)
+
+def _gamma_correction(value):
+    if value <= 0.04045:
+        return value / 12.92
+    else:
+        return ((value + 0.055) / 1.055) ** 2.4
+
+def _xyz_to_lab(value):
+    if value > 0.008856:
+        return value ** (1.0 / 3.0)
+    else:
+        return (value * 903.3 + 16.0) / 116.0
 
 def get_color_distance(color1, color2):
     '''
@@ -246,7 +307,9 @@ def find_closest_color(target_color, color_list):
     closest_color = None
 
     for color in color_list:
-        distance = get_color_distance(target_color, color)
+        # distance = calculate_color_difference(target_color, color)
+        # distance = color_difference_cie76(target_color, color)
+        distance = delta_e_cie2000(target_color, color)
         if distance < min_distance:
             min_distance = distance
             closest_color = color
@@ -271,12 +334,108 @@ def find_most_similar_paint_bgr_color(color_bgr):
     fixed_paint_hsl_list = [bgr_to_hsl(color) for color in get_fixed_painted_rgb_color_hex()]
     # Convert the target color to HSL format
     target_color_hsl = bgr_to_hsl(color_bgr)
+
+    # testcode -- 
+    # fixed_paint_lab_list = [rgb_to_lab(color) for color in get_fixed_painted_rgb_color_hex()]
+    # color1_lab = rgb_to_lab(color_bgr)
+    
+    fixed_paint_lab_list = [bgr_to_lab((color[2], color[1], color[0])) for color in get_fixed_painted_rgb_color_hex()]
+    color1_lab = bgr_to_lab(color_bgr)
+    matched_color_lab = find_closest_color(color1_lab, fixed_paint_lab_list)
+    matched_color_bgr = lab_to_bgr2(matched_color_lab)
+    # end --
+
     # Find the closest color in HSL format
-    matched_color_hsl = find_closest_color(target_color_hsl, fixed_paint_hsl_list)
+    #   matched_color_hsl = find_closest_color(target_color_hsl, fixed_paint_hsl_list)
     # Convert the closest color back to BGR format
-    matched_color_bgr = hsl_to_bgr(matched_color_hsl)
+    #   matched_color_bgr = hsl_to_bgr(matched_color_hsl)
 
     return matched_color_bgr
+
+def calculate_color_difference(color1, color2):
+    """
+    Calculate the normalized color difference between two colors.
+
+    Parameters
+    ----------
+    color1 : tuple[float, float, float]
+        First color in HSL format (Hue, Saturation, Lightness).
+    color2 : tuple[float, float, float]
+        Second color in HSL format (Hue, Saturation, Lightness).
+
+    Returns
+    ----------
+        float: Normalized color difference between 0 and 1.
+    """
+
+    # Unpack HSL components
+    h1, s1, l1 = color1
+    h2, s2, l2 = color2
+
+    # Normalize the hue difference to a range between 0 and 1
+    hue_diff = min(abs(h1 - h2), MAX_HUE - abs(h1 - h2)) / HUE_NORMALIZATION
+    # Normalize the saturation difference to a range between 0 and 1
+    sat_diff = abs(s1 - s2) / SATURATION_NORMALIZATION
+    # Normalize the lightness difference to a range between 0 and 1
+    light_diff = abs(l1 - l2) / LIGHTNESS_NORMALIZATION
+    # Weighted sum of normalized differences with user-defined weights
+    weighted_difference = (HUE_WEIGHT * hue_diff + 
+                            SATURATION_NORMALIZATION * sat_diff + 
+                            LIGHTNESS_WEIGHT * light_diff)
+
+    return weighted_difference
+
+from colormath.color_objects import LabColor, sRGBColor
+from colormath.color_conversions import convert_color
+
+def lab_to_bgr2(lab):
+    # Convert LAB to RGB
+    rgb = convert_color(lab, sRGBColor)
+
+    # Extract RGB values in the range [0, 1]
+    r = max(0, min(rgb.rgb_r, 1))
+    g = max(0, min(rgb.rgb_g, 1))
+    b = max(0, min(rgb.rgb_b, 1))
+
+    # Scale to the range [0, 255]
+    r = int(r * 255)
+    g = int(g * 255)
+    b = int(b * 255)
+
+    return b, g, r
+
+def lab_to_bgr(lab):
+    l, a, b = lab
+
+    y = (l + 16.0) / 116.0
+    x = a / 500.0 + y
+    z = y - b / 200.0
+
+    x = _lab_to_xyz(x)
+    y = _lab_to_xyz(y)
+    z = _lab_to_xyz(z)
+
+    r = x * 3.2404542 - y * 1.5371385 - z * 0.4985314
+    g = x * -0.9692660 + y * 1.8760108 + z * 0.0415560
+    b = x * 0.0556434 - y * 0.2040259 + z * 1.0572252
+
+    r = _xyz_to_rgb(r)
+    g = _xyz_to_rgb(g)
+    b = _xyz_to_rgb(b)
+
+    return int(b * 255), int(g * 255), int(r * 255)
+
+def _lab_to_xyz(value):
+    if value > 0.2068966:
+        return value**3
+    else:
+        return (value - 16.0 / 116.0) / 7.787
+
+def _xyz_to_rgb(value):
+    if value > 0.0031308:
+        return 1.055 * (value**(1.0 / 2.4)) - 0.055
+    else:
+        return value * 12.92
 
 def log_to_file(message, level='info', file_path='log.txt'):
     """
@@ -316,3 +475,18 @@ def log_to_file(message, level='info', file_path='log.txt'):
         file.write(log_message + '\n')
 
     return
+
+def bgr_to_lab(bgr):
+    rgb = (bgr[2], bgr[1], bgr[0])
+    lab1 = convert_color(sRGBColor(rgb[0]/255.0, rgb[1]/255.0, rgb[2]/255.0), LabColor)
+    return  lab1
+
+def rgb_to_ciede2000(rgb1, rgb2):
+    # Convert RGB to LAB
+    lab1 = convert_color(sRGBColor(rgb1[0]/255.0, rgb1[1]/255.0, rgb1[2]/255.0), LabColor)
+    lab2 = convert_color(sRGBColor(rgb2[0]/255.0, rgb2[1]/255.0, rgb2[2]/255.0), LabColor)
+
+    # Calculate CIEDE2000 color difference
+    delta_e = delta_e_cie2000(lab1, lab2)
+
+    return delta_e
