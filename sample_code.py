@@ -4,10 +4,11 @@ from pypipo.convert import pipo_convert, pipo_convert_dev
 def sample_of_pypipo():
     sample_image_binary = cv2.imread(f'./pypipo/sample/sample-image.png')
     pipo_output_binary = pipo_convert(sample_image_binary, number = 16, is_upscale = True)
-    return pipo_output_binary
+    cv2.imwrite(f'./pypipo/sample/sample-image-output.png', pipo_output_binary)
+    return 
 
 def sample_of_pypipo_dev():
-    number_of_repeat = 3
+    number_of_repeat = 2
     for i in range(number_of_repeat):
         # sample_image_binary = cv2.imread(f'./pypipo/sample/sample-image.png')
         
@@ -26,5 +27,5 @@ def sample_of_pypipo_dev():
     return 
 
 if __name__ == "__main__":
-    # sample_of_pypipo()
-    sample_of_pypipo_dev()
+    sample_of_pypipo()
+    # sample_of_pypipo_dev()
