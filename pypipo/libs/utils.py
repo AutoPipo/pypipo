@@ -1,30 +1,38 @@
 ﻿# -*- coding: utf-8 -*-
 
 import cv2
-import math
 import colorsys
 import numpy as np
 from datetime import datetime
 
-from ._colormath.color_objects import *
-from ._colormath.color_conversions import convert_color
-from ._colormath.color_diff import delta_e_cie2000
-from .paint_color_rgb_code  import *
+# for release
+from pypipo.libs._colormath.color_objects import *
+from pypipo.libs.paint_color_rgb_code  import *
+from pypipo.libs._colormath.color_conversions import convert_color
+from pypipo.libs._colormath.color_diff import delta_e_cie2000
 
-MAX_RGB_VALUE = 255
-MAX_HUE = 360
-MAX_SATURATION_LIGHTNESS = 100
+# for dev
+# from ._colormath.color_objects import *
+# from .paint_color_rgb_code  import *
+# from ._colormath.color_conversions import convert_color
+# from ._colormath.color_diff import delta_e_cie2000
 
-# BGR Color tuple convert to Hex Color String Code
+MAX_RGB_VALUE               = 255
+MAX_HUE                     = 360
+MAX_SATURATION_LIGHTNESS    = 100
+
+
 def bgr_to_hex(bgr):
+    # BGR Color tuple convert to Hex Color String Code
     b, g, r = bgr
-    return ('%02x%02x%02x' % (b, g, r)).upper()
+    _hex = ('%02x%02x%02x' % (b, g, r)).upper()
+    return _hex
     
-# Hex Color String Code convert to BGR Color np.array
-def hex_to_bgr(hex):
-    return np.array([int(hex[i:i + 2], 16) for i in (4, 2, 0)])
+def hex_to_bgr(_hex):
+    # Hex Color String Code convert to BGR Color np.array
+    bgr = np.array([int(_hex[i:i + 2], 16) for i in (4, 2, 0)])
+    return bgr
 
-# counting numbers of color
 def get_number_of_image_color(image):
     """Get number of image colors
     Parameters
@@ -165,7 +173,6 @@ def bgr_to_hsl(bgr):
     b, g, r = [x / MAX_RGB_VALUE for x in bgr]
     # Convert BGR to HSL using the colorsys library
     h, l, s = colorsys.rgb_to_hls(r, g, b)
-
     # Convert h, l, s to the specified format
     h *= MAX_HUE
     l *= MAX_SATURATION_LIGHTNESS
@@ -232,6 +239,14 @@ def find_closest_color(target_color, color_list):
 
     return closest_color
 
+def _clamp_rgb_value(value):
+    # Ensure RGB value is within the valid range [0, 1]
+    return max(0, min(value, 1))
+
+def _scale_to_255(*values):
+    # Scale values to the range [0, 255]
+    return tuple(int(v * MAX_RGB_VALUE) for v in values)
+
 def lab_to_bgr(lab_color):
     '''
     Lab Object convert to BGR value.
@@ -257,14 +272,6 @@ def lab_to_bgr(lab_color):
     r, g, b = _scale_to_255(r, g, b)
 
     return b, g, r
-
-def _clamp_rgb_value(value):
-    # Ensure RGB value is within the valid range [0, 1]
-    return max(0, min(value, 1))
-
-def _scale_to_255(*values):
-    # Scale values to the range [0, 255]
-    return tuple(int(v * MAX_RGB_VALUE) for v in values)
 
 def bgr_to_lab(bgr):
     '''

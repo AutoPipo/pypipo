@@ -3,6 +3,7 @@
 from pypipo.libs.process import *
 from pypipo.libs.utils import *
 
+# for release
 def pipo_convert(input_color_image, color_label = True, **kwargs):
     painting = Painting(input_color_image)
     painting_img, color_index_map = painting.run(**kwargs)
@@ -17,7 +18,7 @@ def pipo_convert(input_color_image, color_label = True, **kwargs):
     output = numbering.run(img_lab, lab, color_label = color_label)
     return output
 
-# dev code
+# for dev
 def pipo_convert_dev(output_path, input_color_image, color_label = True, is_dev = True, cnt = 0, **kwargs):
     painting = Painting(input_color_image)
     painting_img, color_index_map = painting.run(**kwargs)

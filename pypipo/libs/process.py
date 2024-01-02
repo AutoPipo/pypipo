@@ -578,13 +578,10 @@ class ColorspaceIndexing:
 
                 center_point = (center[0], center[1])
                 self.__set_label_inside_colorspace(background_img, color_text, center_point, radius)
-                # dev code
-                if self.is_dev:
-                    color_value_bgr = tuple([int(i) for i in color_value_bgr])
-                    log_to_file(f"before:{color_value_bgr}")
-                    color_value_bgr = find_most_similar_paint_bgr_color(color_value_bgr)
-                    log_to_file(f"after:{color_value_bgr}")
-                    cv2.fillPoly(self.filled_color_inside_web_output, pts=[contour], color=color_value_bgr)
+                
+                color_value_bgr = tuple([int(i) for i in color_value_bgr])
+                most_similar_bgr_color = find_most_similar_paint_bgr_color(color_value_bgr)
+                cv2.fillPoly(self.filled_color_inside_web_output, pts=[contour], color=most_similar_bgr_color)
                 
         return background_img
     
@@ -610,14 +607,10 @@ class ColorspaceIndexing:
         for idx in range(len(self.color_rbg_values)):
             cv2.putText(background_img, self.color_indexs[idx], (20, 40*(idx+1)), 
                         fontface, LINE_SCALE, (50, 50, 50), LINE_THICKNESS, 8)
-            if self.is_dev:
-                
-                color_value_bgr = find_most_similar_paint_bgr_color(tuple([int(i) for i in self.color_rbg_values[idx]]))
-                cv2.rectangle(background_img, (60, 40*(idx+1)-20), (90, 40*(idx+1)), 
-                            color_value_bgr, -1, 8)
-            else:
-                cv2.rectangle(background_img, (60, 40*(idx+1)-20), (90, 40*(idx+1)), 
-                            tuple([int(i) for i in self.color_rbg_values[idx]]), -1, 8)
+
+            color_value_bgr = find_most_similar_paint_bgr_color(tuple([int(i) for i in self.color_rbg_values[idx]]))
+            cv2.rectangle(background_img, (60, 40*(idx+1)-20), (90, 40*(idx+1)), 
+                        color_value_bgr, -1, 8)
             
         return background_img
     
